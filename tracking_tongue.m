@@ -4,7 +4,7 @@ clear variables
 
 opticFlow = opticalFlowFarneback;
 
- 
+%Different views have different ROIs. Uncomment in order to track the required view.
 r = [367.5 350.5 361 365];  %midtest
 %r = [135.5 479.5 367 261]; %ltest
 %r= [595.5 431.5 412 302]; %rtest
@@ -22,7 +22,6 @@ while hasFrame(vidReader)
     frameRGB = imcrop(frameRGB1,r);
     frameGray = rgb2gray(frameRGB);
     frameGray=imsharpen(frameGray);
-    %frameGray = adapthisteq(frameGray,'clipLimit',0.01,'Distribution','rayleigh');
     flow = estimateFlow(opticFlow,frameGray);
     [row,col]=find(flow.Magnitude == max(flow.Magnitude(:)));
     imshow(frameGray)

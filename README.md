@@ -37,4 +37,4 @@ The 3D visualization should look something like this. These are the 3D coordinat
 
 ![3D-R](9.png)
 
-For any queries, please feel free to contact me at `kumaar324@gmail.com`
+For any queries, please feel free to contact us at `kumaar324@gmail.com` or 'navaneeth.94@gmail.com'
