@@ -1,5 +1,5 @@
 # USAGE
-# python facial_landmarks_video.py --shape-predictor shape_predictor_68_face_landmarks_finetuned.dat
+# python facial_landmarks_video.py --shape-predictor shape_predictor_68_face_landmarks_finetuned.dat --video input_video.avi
 from imutils import face_utils
 import numpy as np
 import argparse
@@ -11,6 +11,8 @@ import cv2
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--shape-predictor", required=True,
 	help="path to facial landmark predictor")
+ap.add_argument("-v", "--video", default="proefpersoon 2_M.avi",
+	help="path to input video file (default: proefpersoon 2_M.avi)")
 args = vars(ap.parse_args())
 
 # initialize dlib's face detector (HOG-based) and then create
@@ -22,7 +24,7 @@ predictor = dlib.shape_predictor(args["shape_predictor"])
 mouth_array_x = []
 mouth_array_y = []
 
-cap = cv2.VideoCapture('proefpersoon 2_M.avi')
+cap = cv2.VideoCapture(args["video"])
 frame_count = 0
 frame_count_arr = []
 while(True):
