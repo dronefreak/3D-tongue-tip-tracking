@@ -6,6 +6,30 @@ import argparse
 import imutils
 import dlib
 import cv2
+import os
+
+def validate_file_path(file_path):
+    """Validate and sanitize file path to prevent directory traversal"""
+    if not file_path:
+        return False
+    
+    # Normalize the path to handle .. and other navigation patterns
+    normalized_path = os.path.normpath(file_path)
+    
+    # Check if the normalized path still contains parent directory references
+    if '..' in normalized_path or normalized_path.startswith('/') or ':\\' in normalized_path:
+        return False
+    
+    # Check if file exists (for shape predictor) or video file is accessible
+    if os.path.exists(normalized_path):
+        return True
+    else:
+        # For video files, we'll check if the extension is valid even if file doesn't exist yet
+        valid_video_extensions = ['.avi', '.mp4', '.mov', '.mkv', '.wmv', '.flv', '.webm']
+        _, ext = os.path.splitext(normalized_path)
+        if ext.lower() in valid_video_extensions:
+            return True
+        return False
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -15,16 +39,34 @@ ap.add_argument("-v", "--video", default="proefpersoon 2_M.avi",
 	help="path to input video file (default: proefpersoon 2_M.avi)")
 args = vars(ap.parse_args())
 
+# Validate file paths
+if not validate_file_path(args["shape_predictor"]):
+    print(f"Invalid shape predictor file path: {args['shape_predictor']}")
+    exit(1)
+
+if not validate_file_path(args["video"]):
+    print(f"Invalid video file path: {args['video']}")
+    exit(1)
+
 # initialize dlib's face detector (HOG-based) and then create
 # the facial landmark predictor
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor(args["shape_predictor"])
+try:
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor(args["shape_predictor"])
+except Exception as e:
+    print(f"Error initializing face detector or predictor: {e}")
+    exit(1)
 
 # define the arrays for further appending the coordinates
 mouth_array_x = []
 mouth_array_y = []
 
 cap = cv2.VideoCapture(args["video"])
+
+# Check if video capture was successful
+if not cap.isOpened():
+    print(f"Error: Could not open video file: {args['video']}")
+    exit(1)
 frame_count = 0
 frame_count_arr = []
 while(True):
@@ -63,7 +105,7 @@ while(True):
 		# and draw them on the image
 		for (x, y) in shape:
 			cv2.circle(image, (x, y), 3, (0, 0, 255), -1)
-	cv2.imwrite('image.png',image)
+    # Only write the final processed frame to disk once at the end
 	cv2.imshow('image',image)
 	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break

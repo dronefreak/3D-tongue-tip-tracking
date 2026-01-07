@@ -15,6 +15,7 @@ import numpy as np
 import cv2
 import glob
 import sys
+import os
 import argparse
 
 #---------------------- SET THE PARAMETERS
@@ -26,6 +27,41 @@ dimension = 20 #- mm
 workingFolder   = "./camera_01"
 imageType       = 'jpg'
 #------------------------------------------
+
+def sanitize_path(path):
+    """Sanitize file path to prevent directory traversal"""
+    # Remove any '..' patterns that could lead to directory traversal
+    path = os.path.normpath(path)
+    # Ensure path doesn't contain potentially dangerous characters
+    if '..' in path or path.startswith('/') or ':\\' in path:
+        raise ValueError("Invalid path provided")
+    return path
+
+def validate_inputs(folder, img_type, rows, cols, dim):
+    """Validate input parameters"""
+    # Validate folder path
+    try:
+        folder = sanitize_path(folder)
+    except ValueError as e:
+        print(f"Invalid folder path: {e}")
+        sys.exit(1)
+    
+    # Validate image type
+    valid_extensions = ['jpg', 'jpeg', 'png', 'bmp', 'tiff']
+    if img_type.lower() not in valid_extensions:
+        print(f"Invalid image type: {img_type}. Valid types: {valid_extensions}")
+        sys.exit(1)
+    
+    # Validate numeric values
+    if rows <= 0 or cols <= 0:
+        print("Number of rows and columns must be positive integers")
+        sys.exit(1)
+    
+    if dim <= 0:
+        print("Cell dimension must be a positive number")
+        sys.exit(1)
+    
+    return folder, img_type, rows, cols, dim
 
 # termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, dimension, 0.001)
@@ -42,11 +78,29 @@ if len(sys.argv) < 6:
         print("\n Not enough inputs are provided. Using the default values.\n\n" \
               " type -h for help")
 else:
-    workingFolder   = sys.argv[1]
-    imageType       = sys.argv[2]
-    nRows           = int(sys.argv[3])
-    nCols           = int(sys.argv[4])
-    dimension       = float(sys.argv[5])
+    try:
+        raw_workingFolder = sys.argv[1]
+        raw_imageType = sys.argv[2]
+        raw_nRows = int(sys.argv[3])
+        raw_nCols = int(sys.argv[4])
+        raw_dimension = float(sys.argv[5])
+        
+        # Validate all inputs
+        workingFolder, imageType, nRows, nCols, dimension = validate_inputs(
+            raw_workingFolder, raw_imageType, raw_nRows, raw_nCols, raw_dimension
+        )
+        
+        # Update termination criteria and object points with validated values
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, dimension, 0.001)
+        objp = np.zeros((nRows*nCols,3), np.float32)
+        objp[:,:2] = np.mgrid[0:nCols,0:nRows].T.reshape(-1,2)
+        
+    except ValueError as e:
+        print(f"Invalid input: {e}")
+        sys.exit(1)
+    except IndexError:
+        print("Error processing command line arguments")
+        sys.exit(1)
 
 if '-h' in sys.argv or '--h' in sys.argv:
     print("\n IMAGE CALIBRATION GIVEN A SET OF IMAGES")
