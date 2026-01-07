@@ -1,12 +1,5 @@
 # USAGE
 # python facial_landmarks_video.py --shape-predictor shape_predictor_68_face_landmarks_finetuned.dat --video input_video.avi
-"""
-Facial Landmark Detection in Video
-
-This script detects facial landmarks in a video stream using dlib's
-pre-trained shape predictor model. It tracks mouth coordinates and
-generates plots of the motion over time.
-"""
 from imutils import face_utils
 import numpy as np
 import argparse
@@ -38,33 +31,13 @@ def validate_file_path(file_path):
             return True
         return False
 
-# Define constants
-DEFAULT_VIDEO_FILE = "proefpersoon 2_M.avi"
-MOUTH_LANDMARK_START = 48
-MOUTH_LANDMARK_END = 49
-PLOT_X_FILENAME = 'plot_x.png'
-PLOT_Y_FILENAME = 'plot_y.png'
-
-def initialize_arg_parser():
-    """Initialize and return argument parser with proper help messages"""
-    parser = argparse.ArgumentParser(
-        description="Detect facial landmarks in video and track mouth motion",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python facial_landmarks_video.py --shape-predictor shape_predictor_68_face_landmarks.dat --video input.mp4
-  python facial_landmarks_video.py --shape-predictor shape_predictor_68_face_landmarks.dat
-        """
-    )
-    parser.add_argument("-p", "--shape-predictor", required=True,
-                        help="path to facial landmark predictor")
-    parser.add_argument("-v", "--video", default=DEFAULT_VIDEO_FILE,
-                        help=f"path to input video file (default: {DEFAULT_VIDEO_FILE})")
-    return parser
-
-# Parse arguments using the improved argument parser
-parser = initialize_arg_parser()
-args = vars(parser.parse_args())
+# construct the argument parser and parse the arguments
+ap = argparse.ArgumentParser()
+ap.add_argument("-p", "--shape-predictor", required=True,
+	help="path to facial landmark predictor")
+ap.add_argument("-v", "--video", default="proefpersoon 2_M.avi",
+	help="path to input video file (default: proefpersoon 2_M.avi)")
+args = vars(ap.parse_args())
 
 # Validate file paths
 if not validate_file_path(args["shape_predictor"]):
@@ -94,19 +67,11 @@ cap = cv2.VideoCapture(args["video"])
 if not cap.isOpened():
     print(f"Error: Could not open video file: {args['video']}")
     exit(1)
-
 frame_count = 0
 frame_count_arr = []
-
-try:
-    while True:
+while(True):
 	# Capture image-by-image
 	ret, image = cap.read()
-	
-	# Break if no more frames
-	if not ret:
-	    break
-		
 	image = imutils.resize(image, width=500)
 	# Our operations on the image come here
 	#image = imutils.resize(image, width=500)
@@ -119,40 +84,32 @@ try:
 	# determine the facial landmarks for the face region, then
 	# convert the facial landmark (x, y)-coordinates to a NumPy
 	# array
-		try:
-			shape = predictor(gray, rect)
-			shape = face_utils.shape_to_np(shape)
-			
-			# Process mouth landmarks
-			for (x, y) in shape[MOUTH_LANDMARK_START:MOUTH_LANDMARK_END]:
-				mouth_array_x.append(x)
-				frame_count = frame_count + 1
-				frame_count_arr.append(frame_count)
-				mouth_array_y.append(y)
+		shape = predictor(gray, rect)
+		shape = face_utils.shape_to_np(shape)
+		for (x, y) in shape[48:49]:
+			mouth_array_x.append(x)
+			frame_count = frame_count + 1
+			frame_count_arr.append(frame_count)
+			mouth_array_y.append(y)
 
-			# convert dlib's rectangle to a OpenCV-style bounding box
-			# [i.e., (x, y, w, h)], then draw the face bounding box
-			(x, y, w, h) = face_utils.rect_to_bb(rect)
-			cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+		# convert dlib's rectangle to a OpenCV-style bounding box
+		# [i.e., (x, y, w, h)], then draw the face bounding box
+		(x, y, w, h) = face_utils.rect_to_bb(rect)
+		cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-			# show the face number
-			cv2.putText(image, "Face #{}".format(i + 1), (x - 10, y - 10),
-				cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+		# show the face number
+		cv2.putText(image, "Face #{}".format(i + 1), (x - 10, y - 10),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-			# loop over the (x, y)-coordinates for the facial landmarks
-			# and draw them on the image
-			for (x, y) in shape:
-				cv2.circle(image, (x, y), 3, (0, 0, 255), -1)
-		except Exception as e:
-			print(f"Error processing face in frame {frame_count}: {e}")
-			continue
-
-	# Only write the final processed frame to disk once at the end
-	cv2.imshow('image', image)
+		# loop over the (x, y)-coordinates for the facial landmarks
+		# and draw them on the image
+		for (x, y) in shape:
+			cv2.circle(image, (x, y), 3, (0, 0, 255), -1)
+	cv2.imwrite('image.png',image)
+	cv2.imshow('image',image)
 	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break
 
-finally:
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
@@ -178,11 +135,11 @@ ax = plt.subplot(111)
 ax.plot(frame_count_arr,medfilt(x), label='Relative Motion of X-Coordinates')
 plt.title('Graphical Representation')
 ax.legend()
-fig.savefig(PLOT_X_FILENAME)
+fig.savefig('plot_x.png')
 
 fig = plt.figure()
 ax = plt.subplot(111)
 ax.plot(frame_count_arr,medfilt(y), label='Relative Motion of Y-Coordinates')
 plt.title('Graphical Representation')
 ax.legend()
-fig.savefig(PLOT_Y_FILENAME)
+fig.savefig('plot_y.png')
