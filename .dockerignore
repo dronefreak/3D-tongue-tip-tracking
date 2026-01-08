@@ -1,0 +1,46 @@
+# Git files
+.git
+.gitignore
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Output files
+*.png
+*.avi
+*.mp4
+*.csv
+*.json
+*.txt
+!requirements.txt
+!LICENSE
+
+# Model files (too large, should be mounted)
+*.dat
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore

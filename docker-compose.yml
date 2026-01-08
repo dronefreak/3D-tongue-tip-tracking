@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  tongue-tracker:
+    build: .
+    image: tongue-tracking-3d:latest
+    container_name: tongue-tracker
+    volumes:
+      # Mount your input videos
+      - ./input:/data/input:ro
+      # Mount output directory for results
+      - ./output:/data/output
+      # Mount models directory
+      - ./models:/data/models:ro
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - PYTHONUNBUFFERED=1
+    # For X11 forwarding (optional, for display)
+    network_mode: host
+    # Run with specific command
+    command: >
+      python facial_landmarks_video.py
+      --shape-predictor /data/models/shape_predictor_68_face_landmarks_finetuned.dat
+      --video /data/input/video.avi
+      --no-display
+      --export-csv /data/output/results.csv
+      --export-json /data/output/results.json
+      --output-video /data/output/annotated.avi
+
+# Example usage:
+# 1. Place your video in ./input/video.avi
+# 2. Place the model in ./models/shape_predictor_68_face_landmarks_finetuned.dat
+# 3. Run: docker-compose up
+# 4. Results will be in ./output/
