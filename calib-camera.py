@@ -15,20 +15,21 @@ import numpy as np
 import cv2
 import glob
 import sys
-import argparse
+import os
 
 #---------------------- SET THE PARAMETERS
 nRows = 8
 nCols = 8
-dimension = 20 #- mm
+dimension = 20 #- mm (checkerboard square size)
 
 
 workingFolder   = "./camera_01"
 imageType       = 'jpg'
 #------------------------------------------
 
-# termination criteria
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, dimension, 0.001)
+# termination criteria for corner refinement
+# (type, max_iterations, epsilon)
+criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
 objp = np.zeros((nRows*nCols,3), np.float32)
@@ -59,68 +60,84 @@ if '-h' in sys.argv or '--h' in sys.argv:
 
     sys.exit()
 
+# Validate working folder exists
+if not os.path.exists(workingFolder):
+    print(f"Error: Working folder does not exist: {workingFolder}")
+    print("Please create the folder and add calibration images.")
+    sys.exit(1)
+
 # Find the images files
 filename    = workingFolder + "/*." + imageType
 images      = glob.glob(filename)
 
-print(len(images))
+print(f"Found {len(images)} images in {workingFolder}")
 if len(images) < 9:
     print("Not enough images were found: at least 9 shall be provided!!!")
-    sys.exit()
+    sys.exit(1)
 
+# Process images
+nPatternFound = 0
+imgNotGood = images[0]  # Use first image as fallback
 
+for fname in images:
+    if 'calibresult' in fname:
+        continue
 
-else:
-    nPatternFound = 0
-    imgNotGood = images[1]
+    # Read the file and convert to greyscale
+    img = cv2.imread(fname)
 
-    for fname in images:
-        if 'calibresult' in fname: continue
-        #-- Read the file and convert in greyscale
-        img     = cv2.imread(fname)
-        gray    = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    # Validate image was read successfully
+    if img is None:
+        print(f"Warning: Could not read image: {fname}")
+        continue
 
-        print("Reading image ", fname)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        # Find the chess board corners
-        ret, corners = cv2.findChessboardCorners(gray, (nCols,nRows),None)
+    print(f"Reading image: {fname}")
 
-        # If found, add object points, image points (after refining them)
-        if ret == True:
-            print("Pattern found! Press ESC to skip or ENTER to accept")
-            #--- Sometimes, Harris cornes fails with crappy pictures, so
-            corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
+    # Find the chess board corners
+    ret, corners = cv2.findChessboardCorners(gray, (nCols, nRows), None)
 
-            # Draw and display the corners
-            cv2.drawChessboardCorners(img, (nCols,nRows), corners2,ret)
-            cv2.imshow('img',img)
-            # cv2.waitKey(0)
-            k = cv2.waitKey(0) & 0xFF
-            if k == 27: #-- ESC Button
-                print("Image Skipped")
-                imgNotGood = fname
-                continue
+    # If found, add object points, image points (after refining them)
+    if ret == True:
+        print("Pattern found! Press ESC to skip or ENTER to accept")
+        # Refine corner positions for better accuracy
+        corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
 
-            print("Image accepted")
-            nPatternFound += 1
-            objpoints.append(objp)
-            imgpoints.append(corners2)
+        # Draw and display the corners
+        cv2.drawChessboardCorners(img, (nCols, nRows), corners2, ret)
+        cv2.imshow('img', img)
 
-            # cv2.waitKey(0)
-        else:
+        k = cv2.waitKey(0) & 0xFF
+        if k == 27:  # ESC Button
+            print("Image Skipped")
             imgNotGood = fname
+            continue
+
+        print("Image accepted")
+        nPatternFound += 1
+        objpoints.append(objp)
+        imgpoints.append(corners2)
+    else:
+        imgNotGood = fname
 
 
 cv2.destroyAllWindows()
 
 if (nPatternFound > 1):
-    print("Found %d good images" % (nPatternFound))
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
+    print(f"Found {nPatternFound} good images")
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 
     # Undistort an image
     img = cv2.imread(imgNotGood)
-    h,  w = img.shape[:2]
-    print("Image to undistort: ", imgNotGood)
+
+    # Validate image was read successfully
+    if img is None:
+        print(f"Error: Could not read image for undistortion: {imgNotGood}")
+        sys.exit(1)
+
+    h, w = img.shape[:2]
+    print(f"Image to undistort: {imgNotGood}")
     newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
 
     # undistort
@@ -128,34 +145,33 @@ if (nPatternFound > 1):
     dst = cv2.remap(img,mapx,mapy,cv2.INTER_LINEAR)
 
     # crop the image
-    x,y,w,h = roi
+    x, y, w, h = roi
     dst = dst[y:y+h, x:x+w]
-    print("ROI: ", x, y, w, h)
+    print(f"ROI: x={x}, y={y}, w={w}, h={h}")
 
-    cv2.imwrite(workingFolder + "/calibresult.png",dst)
-    print("Calibrated picture saved as calibresult.png")
-    print("Calibration Matrix: ")
+    output_path = workingFolder + "/calibresult.png"
+    cv2.imwrite(output_path, dst)
+    print(f"Calibrated picture saved as {output_path}")
+    print("\nCalibration Matrix:")
     print(mtx)
-    print("Disortion: ", dist)
+    print("\nDistortion Coefficients:")
+    print(dist)
 
-    #--------- Save result
+    # Save calibration results
     filename = workingFolder + "/cameraMatrix.txt"
     np.savetxt(filename, mtx, delimiter=',')
     filename = workingFolder + "/cameraDistortion.txt"
     np.savetxt(filename, dist, delimiter=',')
+    print(f"\nCalibration files saved to {workingFolder}/")
 
+    # Calculate reprojection error
     mean_error = 0
     for i in range(len(objpoints)):
         imgpoints2, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
-        error = cv2.norm(imgpoints[i],imgpoints2, cv2.NORM_L2)/len(imgpoints2)
+        error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2) / len(imgpoints2)
         mean_error += error
 
-    print("total error: ", mean_error/len(objpoints))
+    print(f"Mean reprojection error: {mean_error/len(objpoints):.4f} pixels")
 
 else:
     print("In order to calibrate you need at least 9 good pictures... try again")
-
-
-
-
-
