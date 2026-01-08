@@ -1,5 +1,7 @@
 # USAGE
 # python facial_landmarks_video.py --shape-predictor shape_predictor_68_face_landmarks_finetuned.dat --video input_video.avi
+# For faster batch processing: add --no-display
+# To skip frames: add --skip-frames N (e.g., --skip-frames 2 processes every other frame)
 from imutils import face_utils
 import numpy as np
 import argparse
@@ -18,6 +20,10 @@ ap.add_argument("-p", "--shape-predictor", required=True,
 	help="path to facial landmark predictor")
 ap.add_argument("-v", "--video", default="proefpersoon 2_M.avi",
 	help="path to input video file (default: proefpersoon 2_M.avi)")
+ap.add_argument("--no-display", action="store_true",
+	help="disable video display for faster batch processing")
+ap.add_argument("--skip-frames", type=int, default=1,
+	help="process every Nth frame (default: 1, process all frames)")
 args = vars(ap.parse_args())
 
 # Validate input files
@@ -35,10 +41,6 @@ if not os.path.exists(args["video"]):
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(args["shape_predictor"])
 
-# define the arrays for further appending the coordinates
-mouth_array_x = []
-mouth_array_y = []
-
 cap = cv2.VideoCapture(args["video"])
 
 # Check if video opened successfully
@@ -47,26 +49,47 @@ if not cap.isOpened():
 	sys.exit(1)
 
 total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-print(f"Processing {total_frames} frames...")
+frames_to_process = total_frames // args["skip_frames"]
 
-frame_count = 0
-frame_count_arr = []
+# Preallocate arrays for better performance (avoid repeated list.append())
+# We'll trim these later to actual detections
+mouth_array_x = np.zeros(frames_to_process, dtype=np.float32)
+mouth_array_y = np.zeros(frames_to_process, dtype=np.float32)
+frame_count_arr = np.zeros(frames_to_process, dtype=np.int32)
+
+print(f"Processing {total_frames} frames (every {args['skip_frames']} frame(s))...")
+if args["no_display"]:
+	print("Display disabled for faster processing")
+
 processed_frames = 0
+detection_count = 0
+skip_counter = 0
 
-while(True):
+while True:
 	# Capture image-by-image
 	ret, image = cap.read()
 
 	# Check if video ended
 	if not ret:
-		print(f"\nVideo processing complete. Processed {processed_frames} frames.")
+		print(f"\nVideo processing complete. Processed {processed_frames} frames, detected {detection_count} mouth positions.")
 		break
 
 	processed_frames += 1
+
+	# Skip frames if requested
+	skip_counter += 1
+	if skip_counter < args["skip_frames"]:
+		continue
+	skip_counter = 0
+
+	# Progress indicator
+	if processed_frames % 100 == 0:
+		print(f"Processed {processed_frames}/{total_frames} frames ({detection_count} detections)", end='\r')
+
 	image = imutils.resize(image, width=500)
 	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
- 
-# detect faces in the grayscale image
+
+	# detect faces in the grayscale image
 	rects = detector(gray, 1)
 
 	# Process detected faces
@@ -79,51 +102,58 @@ while(True):
 
 		# Extract mouth coordinates (landmark 48 is the left corner of the mouth)
 		for (x, y) in shape[48:49]:
-			mouth_array_x.append(x)
-			mouth_array_y.append(y)
-			frame_count_arr.append(processed_frames)
+			if detection_count < len(mouth_array_x):
+				mouth_array_x[detection_count] = x
+				mouth_array_y[detection_count] = y
+				frame_count_arr[detection_count] = processed_frames
+				detection_count += 1
 
-		# convert dlib's rectangle to a OpenCV-style bounding box
-		# [i.e., (x, y, w, h)], then draw the face bounding box
-		(x, y, w, h) = face_utils.rect_to_bb(rect)
-		cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+		# Only draw and display if not in no-display mode
+		if not args["no_display"]:
+			# convert dlib's rectangle to a OpenCV-style bounding box
+			# [i.e., (x, y, w, h)], then draw the face bounding box
+			(x, y, w, h) = face_utils.rect_to_bb(rect)
+			cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-		# show the face number
-		cv2.putText(image, "Face #{}".format(i + 1), (x - 10, y - 10),
-			cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+			# show the face number
+			cv2.putText(image, f"Face #{i + 1}", (x - 10, y - 10),
+				cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-		# loop over the (x, y)-coordinates for the facial landmarks
-		# and draw them on the image
-		for (x, y) in shape:
-			cv2.circle(image, (x, y), 3, (0, 0, 255), -1)
-	cv2.imwrite('image.png',image)
-	cv2.imshow('image',image)
-	if cv2.waitKey(1) & 0xFF == ord('q'):
-		break
+			# loop over the (x, y)-coordinates for the facial landmarks
+			# and draw them on the image
+			for (x, y) in shape:
+				cv2.circle(image, (x, y), 3, (0, 0, 255), -1)
+
+	# Only show display if not in no-display mode
+	if not args["no_display"]:
+		cv2.imshow('image', image)
+		if cv2.waitKey(1) & 0xFF == ord('q'):
+			print("\nUser interrupted processing.")
+			break
 
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
 
-print(f"\nTotal detections: {len(frame_count_arr)}")
+# Trim arrays to actual detection count
+mouth_array_x = mouth_array_x[:detection_count]
+mouth_array_y = mouth_array_y[:detection_count]
+frame_count_arr = frame_count_arr[:detection_count]
+
+print(f"\nTotal detections: {detection_count}")
 print(f"Mouth X coordinates: {len(mouth_array_x)}")
 print(f"Mouth Y coordinates: {len(mouth_array_y)}")
 
 # Plotting the results for estimation
 
 # Check if we have valid data to plot
-if len(mouth_array_x) == 0 or len(mouth_array_y) == 0:
+if detection_count == 0:
 	print("\nError: No mouth coordinates detected in the video.")
 	print("Please ensure:")
 	print("  1. The video contains visible faces")
 	print("  2. The shape predictor model is correct")
 	print("  3. The video quality is sufficient for detection")
 	sys.exit(1)
-
-# Convert to numpy arrays for processing
-mouth_array_x = np.array(mouth_array_x)
-mouth_array_y = np.array(mouth_array_y)
-frame_count_arr = np.array(frame_count_arr)
 
 # Check for zero sum to avoid division by zero
 x_sum = np.sum(mouth_array_x)
