@@ -16,7 +16,7 @@ with open(os.path.join(this_directory, 'requirements.txt'), encoding='utf-8') as
 setup(
     name='tongue-tracking-3d',
     version='1.0.0',
-    author='Navaneeth Kumar',
+    author='Saumya Saksena',
     author_email='kumaar324@gmail.com',
     description='Optical Flow based Tongue Tip Tracking in 3D for medical applications',
     long_description=long_description,
