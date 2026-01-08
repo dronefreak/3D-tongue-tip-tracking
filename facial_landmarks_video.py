@@ -47,8 +47,12 @@ if not os.path.exists(args["video"]):
 
 # initialize dlib's face detector (HOG-based) and then create
 # the facial landmark predictor
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor(args["shape_predictor"])
+try:
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor(args["shape_predictor"])
+except Exception as e:
+    print(f"Error initializing face detector or predictor: {e}")
+    exit(1)
 
 cap = cv2.VideoCapture(args["video"])
 
@@ -154,6 +158,7 @@ while True:
 			print("\nUser interrupted processing.")
 			break
 
+finally:
 # When everything done, release the capture
 cap.release()
 if video_writer:

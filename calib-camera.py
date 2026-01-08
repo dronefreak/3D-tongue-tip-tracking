@@ -39,26 +39,34 @@ objp[:,:2] = np.mgrid[0:nCols,0:nRows].T.reshape(-1,2)
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 
-if len(sys.argv) < 6:
-        print("\n Not enough inputs are provided. Using the default values.\n\n" \
-              " type -h for help")
-else:
-    workingFolder   = sys.argv[1]
-    imageType       = sys.argv[2]
-    nRows           = int(sys.argv[3])
-    nCols           = int(sys.argv[4])
-    dimension       = float(sys.argv[5])
+# Parse command line arguments using argparse
+parser = initialize_arg_parser()
+args = parser.parse_args()
 
-if '-h' in sys.argv or '--h' in sys.argv:
-    print("\n IMAGE CALIBRATION GIVEN A SET OF IMAGES")
-    print(" call: python cameracalib.py <folder> <image type> <num rows (9)> <num cols (6)> <cell dimension (25)>")
-    print("\n The script will look for every image in the provided folder and will show the pattern found." \
-          " User can skip the image pressing ESC or accepting the image with RETURN. " \
-          " At the end the end the following files are created:" \
-          "  - cameraDistortion.txt" \
-          "  - cameraMatrix.txt \n\n")
+# Use argparse values if provided
+workingFolder = args.folder
+imageType = args.image_type
+nRows = args.rows
+nCols = args.cols
+dimension = args.dimension
 
-    sys.exit()
+# Validate all inputs
+try:
+    workingFolder, imageType, nRows, nCols, dimension = validate_inputs(
+        workingFolder, imageType, nRows, nCols, dimension
+    )
+    
+    # Update termination criteria and object points with validated values
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, dimension, 0.001)
+    objp = np.zeros((nRows*nCols,3), np.float32)
+    objp[:,:2] = np.mgrid[0:nCols,0:nRows].T.reshape(-1,2)
+    
+except ValueError as e:
+    print(f"Invalid input: {e}")
+    sys.exit(1)
+
+# Since argparse handles help, we don't need the manual help section
+# The script will automatically exit if -h is provided
 
 # Validate working folder exists
 if not os.path.exists(workingFolder):
