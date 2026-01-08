@@ -1,0 +1,19 @@
+# Development requirements for 3D Tongue Tip Tracking
+# Install with: pip install -r requirements-dev.txt
+
+# Include main requirements
+-r requirements.txt
+
+# Testing
+pytest>=6.2.0
+pytest-cov>=2.12.0
+pytest-mock>=3.6.0
+
+# Code quality
+black>=21.0
+flake8>=3.9.0
+pylint>=2.8.0
+mypy>=0.900
+
+# Type stubs
+types-setuptools
