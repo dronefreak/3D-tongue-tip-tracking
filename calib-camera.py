@@ -16,28 +16,70 @@ import cv2
 import glob
 import sys
 import os
+import argparse
 
-#---------------------- SET THE PARAMETERS
+
+def initialize_arg_parser():
+    """Initialize and return argument parser for camera calibration."""
+    parser = argparse.ArgumentParser(
+        description="Camera calibration using checkerboard pattern"
+    )
+    parser.add_argument(
+        "--folder",
+        type=str,
+        default="./camera_01",
+        help="Folder containing calibration images",
+    )
+    parser.add_argument(
+        "--image-type", type=str, default="jpg", help="Image file type (e.g., jpg, png)"
+    )
+    parser.add_argument(
+        "--rows", type=int, default=8, help="Number of rows in checkerboard"
+    )
+    parser.add_argument(
+        "--cols", type=int, default=8, help="Number of columns in checkerboard"
+    )
+    parser.add_argument(
+        "--dimension",
+        type=int,
+        default=20,
+        help="Checkerboard square size in mm",
+    )
+    return parser
+
+
+def validate_inputs(folder, image_type, rows, cols, dim):
+    """Validate input parameters for camera calibration."""
+    if rows < 2 or cols < 2:
+        raise ValueError("Number of rows and columns must be at least 2")
+    if dim <= 0:
+        raise ValueError("Dimension must be positive")
+    if not image_type.isalnum():
+        raise ValueError("Image type must be alphanumeric")
+    return folder, image_type, rows, cols, dim
+
+
+# ---------------------- SET THE PARAMETERS (defaults)
 nRows = 8
 nCols = 8
-dimension = 20 #- mm (checkerboard square size)
+dimension = 20  # - mm (checkerboard square size)
 
 
-workingFolder   = "./camera_01"
-imageType       = 'jpg'
-#------------------------------------------
+workingFolder = "./camera_01"
+imageType = "jpg"
+# ------------------------------------------
 
 # termination criteria for corner refinement
 # (type, max_iterations, epsilon)
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
-objp = np.zeros((nRows*nCols,3), np.float32)
-objp[:,:2] = np.mgrid[0:nCols,0:nRows].T.reshape(-1,2)
+objp = np.zeros((nRows * nCols, 3), np.float32)
+objp[:, :2] = np.mgrid[0:nCols, 0:nRows].T.reshape(-1, 2)
 
 # Arrays to store object points and image points from all the images.
-objpoints = [] # 3d point in real world space
-imgpoints = [] # 2d points in image plane.
+objpoints = []  # 3d point in real world space
+imgpoints = []  # 2d points in image plane.
 
 # Parse command line arguments using argparse
 parser = initialize_arg_parser()
@@ -55,12 +97,12 @@ try:
     workingFolder, imageType, nRows, nCols, dimension = validate_inputs(
         workingFolder, imageType, nRows, nCols, dimension
     )
-    
+
     # Update termination criteria and object points with validated values
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, dimension, 0.001)
-    objp = np.zeros((nRows*nCols,3), np.float32)
-    objp[:,:2] = np.mgrid[0:nCols,0:nRows].T.reshape(-1,2)
-    
+    objp = np.zeros((nRows * nCols, 3), np.float32)
+    objp[:, :2] = np.mgrid[0:nCols, 0:nRows].T.reshape(-1, 2)
+
 except ValueError as e:
     print(f"Invalid input: {e}")
     sys.exit(1)
@@ -75,8 +117,8 @@ if not os.path.exists(workingFolder):
     sys.exit(1)
 
 # Find the images files
-filename    = workingFolder + "/*." + imageType
-images      = glob.glob(filename)
+filename = workingFolder + "/*." + imageType
+images = glob.glob(filename)
 
 print(f"Found {len(images)} images in {workingFolder}")
 if len(images) < 9:
@@ -88,7 +130,7 @@ nPatternFound = 0
 imgNotGood = images[0]  # Use first image as fallback
 
 for fname in images:
-    if 'calibresult' in fname:
+    if "calibresult" in fname:
         continue
 
     # Read the file and convert to greyscale
@@ -107,14 +149,14 @@ for fname in images:
     ret, corners = cv2.findChessboardCorners(gray, (nCols, nRows), None)
 
     # If found, add object points, image points (after refining them)
-    if ret == True:
+    if ret:
         print("Pattern found! Press ESC to skip or ENTER to accept")
         # Refine corner positions for better accuracy
         corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
 
         # Draw and display the corners
         cv2.drawChessboardCorners(img, (nCols, nRows), corners2, ret)
-        cv2.imshow('img', img)
+        cv2.imshow("img", img)
 
         k = cv2.waitKey(0) & 0xFF
         if k == 27:  # ESC Button
@@ -132,9 +174,11 @@ for fname in images:
 
 cv2.destroyAllWindows()
 
-if (nPatternFound > 1):
+if nPatternFound > 1:
     print(f"Found {nPatternFound} good images")
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
+        objpoints, imgpoints, gray.shape[::-1], None, None
+    )
 
     # Undistort an image
     img = cv2.imread(imgNotGood)
@@ -146,15 +190,15 @@ if (nPatternFound > 1):
 
     h, w = img.shape[:2]
     print(f"Image to undistort: {imgNotGood}")
-    newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
+    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
     # undistort
-    mapx,mapy = cv2.initUndistortRectifyMap(mtx,dist,None,newcameramtx,(w,h),5)
-    dst = cv2.remap(img,mapx,mapy,cv2.INTER_LINEAR)
+    mapx, mapy = cv2.initUndistortRectifyMap(mtx, dist, None, newcameramtx, (w, h), 5)
+    dst = cv2.remap(img, mapx, mapy, cv2.INTER_LINEAR)
 
     # crop the image
     x, y, w, h = roi
-    dst = dst[y:y+h, x:x+w]
+    dst = dst[y : y + h, x : x + w]
     print(f"ROI: x={x}, y={y}, w={w}, h={h}")
 
     output_path = workingFolder + "/calibresult.png"
@@ -167,9 +211,9 @@ if (nPatternFound > 1):
 
     # Save calibration results
     filename = workingFolder + "/cameraMatrix.txt"
-    np.savetxt(filename, mtx, delimiter=',')
+    np.savetxt(filename, mtx, delimiter=",")
     filename = workingFolder + "/cameraDistortion.txt"
-    np.savetxt(filename, dist, delimiter=',')
+    np.savetxt(filename, dist, delimiter=",")
     print(f"\nCalibration files saved to {workingFolder}/")
 
     # Calculate reprojection error

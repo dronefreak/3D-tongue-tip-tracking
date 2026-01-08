@@ -1,10 +1,9 @@
 """
 Tests for input validation and error handling
 """
-import pytest
+
 import tempfile
 import os
-from pathlib import Path
 
 
 def test_video_file_validation():
@@ -13,7 +12,7 @@ def test_video_file_validation():
     assert not os.path.exists("nonexistent_video.avi")
 
     # Test with existing temporary file
-    with tempfile.NamedTemporaryFile(suffix='.avi', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".avi", delete=False) as f:
         temp_path = f.name
 
     try:

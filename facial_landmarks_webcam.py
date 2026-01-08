@@ -6,7 +6,6 @@ This script performs real-time facial landmark detection and tongue tracking
 using a webcam feed. Press 'q' to quit, 'r' to start/stop recording.
 """
 from imutils import face_utils
-import numpy as np
 import argparse
 import imutils
 import dlib
@@ -17,23 +16,34 @@ import json
 import time
 from datetime import datetime
 
+
 def main():
     # Construct the argument parser and parse the arguments
-    ap = argparse.ArgumentParser(description="Real-time tongue tip tracking with webcam")
-    ap.add_argument("-p", "--shape-predictor", required=True,
-        help="path to facial landmark predictor")
-    ap.add_argument("-c", "--camera", type=int, default=0,
-        help="camera device index (default: 0)")
-    ap.add_argument("-w", "--width", type=int, default=640,
-        help="frame width (default: 640)")
-    ap.add_argument("-r", "--record", action="store_true",
-        help="enable recording mode")
-    ap.add_argument("--export-csv", type=str,
-        help="export mouth coordinates to CSV file")
-    ap.add_argument("--export-json", type=str,
-        help="export mouth coordinates to JSON file")
-    ap.add_argument("--fps", type=int, default=30,
-        help="target FPS for recording (default: 30)")
+    ap = argparse.ArgumentParser(
+        description="Real-time tongue tip tracking with webcam"
+    )
+    ap.add_argument(
+        "-p",
+        "--shape-predictor",
+        required=True,
+        help="path to facial landmark predictor",
+    )
+    ap.add_argument(
+        "-c", "--camera", type=int, default=0, help="camera device index (default: 0)"
+    )
+    ap.add_argument(
+        "-w", "--width", type=int, default=640, help="frame width (default: 640)"
+    )
+    ap.add_argument("-r", "--record", action="store_true", help="enable recording mode")
+    ap.add_argument(
+        "--export-csv", type=str, help="export mouth coordinates to CSV file"
+    )
+    ap.add_argument(
+        "--export-json", type=str, help="export mouth coordinates to JSON file"
+    )
+    ap.add_argument(
+        "--fps", type=int, default=30, help="target FPS for recording (default: 30)"
+    )
     args = vars(ap.parse_args())
 
     # Validate model file
@@ -113,7 +123,7 @@ def main():
             rects = detector(gray, 1)
 
             # Process detected faces
-            for (i, rect) in enumerate(rects):
+            for i, rect in enumerate(rects):
                 # Get facial landmarks
                 shape = predictor(gray, rect)
                 shape = face_utils.shape_to_np(shape)
@@ -137,20 +147,33 @@ def main():
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
                 # Draw face number
-                cv2.putText(frame, f"Face #{i + 1}", (x - 10, y - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(
+                    frame,
+                    f"Face #{i + 1}",
+                    (x - 10, y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 255, 0),
+                    2,
+                )
 
                 # Draw all facial landmarks
-                for (lx, ly) in shape:
+                for lx, ly in shape:
                     cv2.circle(frame, (lx, ly), 2, (0, 0, 255), -1)
 
                 # Highlight mouth landmark
                 cv2.circle(frame, (mouth_x, mouth_y), 5, (255, 0, 0), -1)
 
                 # Draw mouth position text
-                cv2.putText(frame, f"Mouth: ({mouth_x}, {mouth_y})",
+                cv2.putText(
+                    frame,
+                    f"Mouth: ({mouth_x}, {mouth_y})",
                     (10, actual_height - 40),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (255, 0, 0),
+                    2,
+                )
 
             # Calculate FPS
             fps_frame_count += 1
@@ -162,34 +185,66 @@ def main():
             # Draw status information
             status_text = "REC" if is_recording else "PAUSED"
             status_color = (0, 0, 255) if is_recording else (0, 255, 255)
-            cv2.putText(frame, status_text, (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, status_color, 2)
+            cv2.putText(
+                frame,
+                status_text,
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                status_color,
+                2,
+            )
 
-            cv2.putText(frame, f"FPS: {current_fps:.1f}", (10, 60),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(
+                frame,
+                f"FPS: {current_fps:.1f}",
+                (10, 60),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 255, 255),
+                1,
+            )
 
-            cv2.putText(frame, f"Frames: {frame_count}", (10, 85),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(
+                frame,
+                f"Frames: {frame_count}",
+                (10, 85),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 255, 255),
+                1,
+            )
 
-            cv2.putText(frame, f"Detections: {len(mouth_array_x)}", (10, 110),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(
+                frame,
+                f"Detections: {len(mouth_array_x)}",
+                (10, 110),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 255, 255),
+                1,
+            )
 
             # Display frame
-            cv2.imshow('Tongue Tip Tracking (Webcam)', frame)
+            cv2.imshow("Tongue Tip Tracking (Webcam)", frame)
 
             # Handle keyboard input
             key = cv2.waitKey(1) & 0xFF
 
-            if key == ord('q'):
+            if key == ord("q"):
                 print("\nQuitting...")
                 break
-            elif key == ord('r'):
+            elif key == ord("r"):
                 is_recording = not is_recording
                 if is_recording:
-                    print("Recording resumed" if recording_started else "Recording started")
+                    print(
+                        "Recording resumed"
+                        if recording_started
+                        else "Recording started"
+                    )
                 else:
                     print("Recording paused")
-            elif key == ord('c'):
+            elif key == ord("c"):
                 mouth_array_x.clear()
                 mouth_array_y.clear()
                 timestamp_arr.clear()
@@ -214,45 +269,49 @@ def main():
             # Export to CSV
             if args["export_csv"]:
                 import csv
-                with open(args["export_csv"], 'w', newline='') as csvfile:
+
+                with open(args["export_csv"], "w", newline="") as csvfile:
                     writer = csv.writer(csvfile)
-                    writer.writerow(['frame', 'timestamp', 'mouth_x', 'mouth_y'])
+                    writer.writerow(["frame", "timestamp", "mouth_x", "mouth_y"])
                     for i in range(len(mouth_array_x)):
-                        writer.writerow([
-                            frame_count_arr[i],
-                            timestamp_arr[i],
-                            mouth_array_x[i],
-                            mouth_array_y[i]
-                        ])
+                        writer.writerow(
+                            [
+                                frame_count_arr[i],
+                                timestamp_arr[i],
+                                mouth_array_x[i],
+                                mouth_array_y[i],
+                            ]
+                        )
                 print(f"Exported data to CSV: {args['export_csv']}")
 
             # Export to JSON
             if args["export_json"]:
                 data = {
-                    'recording_date': datetime.now().isoformat(),
-                    'camera_index': args['camera'],
-                    'frame_width': args['width'],
-                    'target_fps': args['fps'],
-                    'total_frames': frame_count,
-                    'detections': len(mouth_array_x),
-                    'duration_seconds': timestamp_arr[-1] if timestamp_arr else 0,
-                    'coordinates': [
+                    "recording_date": datetime.now().isoformat(),
+                    "camera_index": args["camera"],
+                    "frame_width": args["width"],
+                    "target_fps": args["fps"],
+                    "total_frames": frame_count,
+                    "detections": len(mouth_array_x),
+                    "duration_seconds": timestamp_arr[-1] if timestamp_arr else 0,
+                    "coordinates": [
                         {
-                            'frame': int(frame_count_arr[i]),
-                            'timestamp': float(timestamp_arr[i]),
-                            'mouth_x': float(mouth_array_x[i]),
-                            'mouth_y': float(mouth_array_y[i])
+                            "frame": int(frame_count_arr[i]),
+                            "timestamp": float(timestamp_arr[i]),
+                            "mouth_x": float(mouth_array_x[i]),
+                            "mouth_y": float(mouth_array_y[i]),
                         }
                         for i in range(len(mouth_array_x))
-                    ]
+                    ],
                 }
-                with open(args["export_json"], 'w') as jsonfile:
+                with open(args["export_json"], "w") as jsonfile:
                     json.dump(data, jsonfile, indent=2)
                 print(f"Exported data to JSON: {args['export_json']}")
 
             print("\nSession complete!")
         else:
             print("\nNo data recorded")
+
 
 if __name__ == "__main__":
     main()
