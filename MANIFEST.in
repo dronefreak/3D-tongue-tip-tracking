@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+include requirements.txt
+include CODE_ANALYSIS.md
+include *.m
+recursive-include * *.png *.jpg
