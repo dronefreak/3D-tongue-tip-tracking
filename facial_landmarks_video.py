@@ -2,6 +2,8 @@
 # python facial_landmarks_video.py --shape-predictor shape_predictor_68_face_landmarks_finetuned.dat --video input_video.avi
 # For faster batch processing: add --no-display
 # To skip frames: add --skip-frames N (e.g., --skip-frames 2 processes every other frame)
+# To export data: add --export-csv output.csv or --export-json output.json
+# To save annotated video: add --output-video output.avi
 from imutils import face_utils
 import numpy as np
 import argparse
@@ -10,6 +12,7 @@ import dlib
 import cv2
 import os
 import sys
+import json
 import matplotlib
 import matplotlib.pyplot as plt
 from scipy.signal import medfilt, find_peaks
@@ -24,6 +27,12 @@ ap.add_argument("--no-display", action="store_true",
 	help="disable video display for faster batch processing")
 ap.add_argument("--skip-frames", type=int, default=1,
 	help="process every Nth frame (default: 1, process all frames)")
+ap.add_argument("--export-csv", type=str,
+	help="export mouth coordinates to CSV file")
+ap.add_argument("--export-json", type=str,
+	help="export mouth coordinates to JSON file")
+ap.add_argument("--output-video", type=str,
+	help="save annotated video to file (e.g., output.avi)")
 args = vars(ap.parse_args())
 
 # Validate input files
@@ -50,6 +59,16 @@ if not cap.isOpened():
 
 total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 frames_to_process = total_frames // args["skip_frames"]
+
+# Initialize video writer if output video requested
+video_writer = None
+if args["output_video"]:
+	fps = cap.get(cv2.CAP_PROP_FPS)
+	fourcc = cv2.VideoWriter_fourcc(*'XVID')
+	# Video will be resized to width=500, so calculate proportional height
+	video_writer = cv2.VideoWriter(args["output_video"], fourcc, fps / args["skip_frames"],
+	                               (500, int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) * 500 / cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
+	print(f"Saving annotated video to: {args['output_video']}")
 
 # Preallocate arrays for better performance (avoid repeated list.append())
 # We'll trim these later to actual detections
@@ -108,8 +127,8 @@ while True:
 				frame_count_arr[detection_count] = processed_frames
 				detection_count += 1
 
-		# Only draw and display if not in no-display mode
-		if not args["no_display"]:
+		# Draw annotations if display enabled OR video output requested
+		if not args["no_display"] or video_writer:
 			# convert dlib's rectangle to a OpenCV-style bounding box
 			# [i.e., (x, y, w, h)], then draw the face bounding box
 			(x, y, w, h) = face_utils.rect_to_bb(rect)
@@ -124,6 +143,10 @@ while True:
 			for (x, y) in shape:
 				cv2.circle(image, (x, y), 3, (0, 0, 255), -1)
 
+	# Write frame to output video if requested
+	if video_writer:
+		video_writer.write(image)
+
 	# Only show display if not in no-display mode
 	if not args["no_display"]:
 		cv2.imshow('image', image)
@@ -133,6 +156,9 @@ while True:
 
 # When everything done, release the capture
 cap.release()
+if video_writer:
+	video_writer.release()
+	print(f"Saved annotated video: {args['output_video']}")
 cv2.destroyAllWindows()
 
 # Trim arrays to actual detection count
@@ -186,5 +212,36 @@ ax.legend()
 fig.savefig('plot_y.png')
 plt.close(fig)
 print("Saved plot_y.png")
+
+# Export data to CSV if requested
+if args["export_csv"]:
+	import csv
+	with open(args["export_csv"], 'w', newline='') as csvfile:
+		writer = csv.writer(csvfile)
+		writer.writerow(['frame', 'mouth_x', 'mouth_y'])
+		for i in range(detection_count):
+			writer.writerow([frame_count_arr[i], mouth_array_x[i], mouth_array_y[i]])
+	print(f"Exported data to CSV: {args['export_csv']}")
+
+# Export data to JSON if requested
+if args["export_json"]:
+	data = {
+		'video_file': args['video'],
+		'total_frames': total_frames,
+		'frames_processed': processed_frames,
+		'detections': detection_count,
+		'skip_frames': args['skip_frames'],
+		'coordinates': [
+			{
+				'frame': int(frame_count_arr[i]),
+				'mouth_x': float(mouth_array_x[i]),
+				'mouth_y': float(mouth_array_y[i])
+			}
+			for i in range(detection_count)
+		]
+	}
+	with open(args["export_json"], 'w') as jsonfile:
+		json.dump(data, jsonfile, indent=2)
+	print(f"Exported data to JSON: {args['export_json']}")
 
 print("\nProcessing complete!")
