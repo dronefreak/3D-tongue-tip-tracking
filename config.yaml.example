@@ -1,0 +1,63 @@
+# Configuration file for 3D Tongue Tip Tracking
+# Copy this file to config.yaml and customize as needed
+
+# Model configuration
+model:
+  shape_predictor: "shape_predictor_68_face_landmarks_finetuned.dat"
+
+# Video processing settings
+video:
+  # Default video file (can be overridden by command line)
+  default_input: "input_video.avi"
+
+  # Processing options
+  skip_frames: 1  # Process every Nth frame (1 = all frames)
+  no_display: false  # Disable video display for faster processing
+  frame_width: 500  # Resize frames to this width
+
+  # Output options
+  export_csv: true
+  export_json: true
+  export_video: false
+  output_directory: "./output"
+
+# Webcam settings
+webcam:
+  camera_index: 0  # 0 = default camera, 1+ for external cameras
+  width: 640
+  fps: 30
+  record_by_default: false
+
+# Performance tuning
+performance:
+  # Detection settings
+  detection_upsample: 1  # Higher = more accurate but slower (0-2)
+
+  # Array preallocation size estimate (frames)
+  preallocate_size: 10000
+
+  # Progress update frequency (frames)
+  progress_interval: 100
+
+# Output format settings
+output:
+  # CSV format
+  csv:
+    delimiter: ","
+    include_header: true
+
+  # JSON format
+  json:
+    indent: 2
+    include_metadata: true
+
+  # Video output
+  video:
+    codec: "XVID"  # Video codec (XVID, MP4V, etc.)
+    fps_inherit: true  # Use input video FPS
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: null  # Set to path for file logging, null for console only
+  format: "%(asctime)s - %(levelname)s - %(message)s"
