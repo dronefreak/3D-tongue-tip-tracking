@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 """
-From https://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_calib3d/py_calibration/py_calibration.html#calibration
+From https://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/
+py_calib3d/py_calibration/py_calibration.html#calibration
 
 Calling:
 cameracalib.py  <folder> <image type> <num rows> <num cols> <cell dimension>

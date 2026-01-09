@@ -1,5 +1,6 @@
 # USAGE
-# python facial_landmarks_video.py --shape-predictor shape_predictor_68_face_landmarks_finetuned.dat --video input_video.avi
+# python facial_landmarks_video.py --shape-predictor \
+#   shape_predictor_68_face_landmarks_finetuned.dat --video input_video.avi
 # For faster batch processing: add --no-display
 # To skip frames: add --skip-frames N (e.g., --skip-frames 2 processes every other frame)
 # To export data: add --export-csv output.csv or --export-json output.json
@@ -117,7 +118,8 @@ try:
         # Check if video ended
         if not ret:
             print(
-                f"\nVideo processing complete. Processed {processed_frames} frames, detected {detection_count} mouth positions."
+                f"\nVideo processing complete. Processed {processed_frames} "
+                f"frames, detected {detection_count} mouth positions."
             )
             break
 
@@ -132,7 +134,8 @@ try:
         # Progress indicator
         if processed_frames % 100 == 0:
             print(
-                f"Processed {processed_frames}/{total_frames} frames ({detection_count} detections)",
+                f"Processed {processed_frames}/{total_frames} frames "
+                f"({detection_count} detections)",
                 end="\r",
             )
 
