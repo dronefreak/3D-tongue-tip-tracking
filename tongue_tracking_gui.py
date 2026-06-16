@@ -357,7 +357,7 @@ class TongueTrackingGUI:
         thread.start()
 
     def start_webcam(self):
-        """Start webcam tracking"""
+        """Start webcam tracking in a background thread so the GUI stays responsive."""
         # Validate model
         if not self.model_path.get():
             messagebox.showerror("Error", "Please select a model file")
@@ -374,14 +374,18 @@ class TongueTrackingGUI:
             "--camera", str(self.camera_index.get())
         ]
 
-        # Run webcam (blocking)
         self.status_bar.config(text="Webcam running...")
+        thread = threading.Thread(target=self._run_webcam_cmd, args=(cmd,), daemon=True)
+        thread.start()
+
+    def _run_webcam_cmd(self, cmd):
+        """Run the webcam subprocess without blocking the GUI event loop."""
         try:
             subprocess.run(cmd)
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to start webcam: {e}")
+            self.root.after(0, lambda: messagebox.showerror("Error", f"Failed to start webcam: {e}"))
         finally:
-            self.status_bar.config(text="Ready")
+            self.root.after(0, lambda: self.status_bar.config(text="Ready"))
 
     def run_command(self, cmd, log_widget):
         """Run command and capture output"""
