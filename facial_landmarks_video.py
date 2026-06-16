@@ -64,21 +64,28 @@ if not cap.isOpened():
 total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 frames_to_process = total_frames // args["skip_frames"]
 
+# Width used for all frame resizing — keep in sync with imutils.resize call below
+FRAME_WIDTH = 500
+
 # Initialize video writer if output video requested
 video_writer = None
 if args["output_video"]:
 	fps = cap.get(cv2.CAP_PROP_FPS)
 	fourcc = cv2.VideoWriter_fourcc(*'XVID')
-	# Video will be resized to width=500, so calculate proportional height
-	video_writer = cv2.VideoWriter(args["output_video"], fourcc, fps / args["skip_frames"],
-	                               (500, int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) * 500 / cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
+	orig_w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+	orig_h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+	# Guard against zero-width source (some codecs mis-report dimensions)
+	out_h = int(orig_h * FRAME_WIDTH / orig_w) if orig_w > 0 else FRAME_WIDTH
+	video_writer = cv2.VideoWriter(
+		args["output_video"], fourcc, fps / args["skip_frames"], (FRAME_WIDTH, out_h)
+	)
 	print(f"Saving annotated video to: {args['output_video']}")
 
 # Preallocate arrays for better performance (avoid repeated list.append())
-# We'll trim these later to actual detections
-mouth_array_x = np.zeros(frames_to_process, dtype=np.float32)
-mouth_array_y = np.zeros(frames_to_process, dtype=np.float32)
-frame_count_arr = np.zeros(frames_to_process, dtype=np.int32)
+# Use total_frames (not frames_to_process) so multi-face frames don't overflow silently
+mouth_array_x = np.zeros(total_frames, dtype=np.float32)
+mouth_array_y = np.zeros(total_frames, dtype=np.float32)
+frame_count_arr = np.zeros(total_frames, dtype=np.int32)
 
 print(f"Processing {total_frames} frames (every {args['skip_frames']} frame(s))...")
 if args["no_display"]:
@@ -109,7 +116,7 @@ while True:
 	if processed_frames % 100 == 0:
 		print(f"Processed {processed_frames}/{total_frames} frames ({detection_count} detections)", end='\r')
 
-	image = imutils.resize(image, width=500)
+	image = imutils.resize(image, width=FRAME_WIDTH)
 	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 	# detect faces in the grayscale image
@@ -158,8 +165,7 @@ while True:
 			print("\nUser interrupted processing.")
 			break
 
-finally:
-# When everything done, release the capture
+# Release resources — runs on both normal exit and user interrupt
 cap.release()
 if video_writer:
 	video_writer.release()

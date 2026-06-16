@@ -1,21 +1,70 @@
 #!/usr/bin/env python
 
 """
-From https://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_calib3d/py_calibration/py_calibration.html#calibration
+Camera calibration using a checkerboard pattern.
 
-Calling:
-cameracalib.py  <folder> <image type> <num rows> <num cols> <cell dimension>
+Reference:
+  https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html
 
-like cameracalib.py folder_name png
+Usage:
+  python calib-camera.py <folder> <image_type> <num_rows> <num_cols> <cell_dimension_mm>
 
---h for help
+Example:
+  python calib-camera.py ./camera_01 jpg 8 8 20
+
+  --help for all options.
 """
 
+import argparse
 import numpy as np
 import cv2
 import glob
 import sys
 import os
+
+# Number of iterations for subpixel corner refinement
+MAX_CORNER_ITERATIONS = 30
+# Minimum images required for a valid calibration
+MIN_IMAGES_REQUIRED = 9
+
+
+def initialize_arg_parser():
+    """Build and return the CLI argument parser."""
+    parser = argparse.ArgumentParser(
+        description="Calibrate a camera using a checkerboard pattern.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument("folder", type=str,
+                        help="Path to folder containing calibration images")
+    parser.add_argument("image_type", type=str,
+                        help="Image file extension (e.g. jpg, png)")
+    parser.add_argument("rows", type=int,
+                        help="Number of internal corners along the checkerboard rows")
+    parser.add_argument("cols", type=int,
+                        help="Number of internal corners along the checkerboard columns")
+    parser.add_argument("dimension", type=float,
+                        help="Physical size of each checkerboard square in mm")
+    return parser
+
+
+def validate_inputs(folder, image_type, rows, cols, dimension):
+    """Validate calibration parameters and return them (raises ValueError on bad input)."""
+    if rows < 2:
+        raise ValueError(f"rows must be >= 2, got {rows}")
+    if cols < 2:
+        raise ValueError(f"cols must be >= 2, got {cols}")
+    if dimension <= 0:
+        raise ValueError(f"dimension must be > 0, got {dimension}")
+
+    # Strip a leading dot from the extension if supplied (e.g. ".jpg" → "jpg")
+    image_type = image_type.lstrip(".")
+    if not image_type:
+        raise ValueError("image_type must not be empty")
+
+    # Normalise folder path but do not restrict to relative paths
+    folder = os.path.normpath(folder)
+
+    return folder, image_type, rows, cols, dimension
 
 #---------------------- SET THE PARAMETERS
 nRows = 8
@@ -29,7 +78,7 @@ imageType       = 'jpg'
 
 # termination criteria for corner refinement
 # (type, max_iterations, epsilon)
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, MAX_CORNER_ITERATIONS, 0.001)
 
 # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
 objp = np.zeros((nRows*nCols,3), np.float32)
@@ -57,7 +106,7 @@ try:
     )
     
     # Update termination criteria and object points with validated values
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, dimension, 0.001)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, MAX_CORNER_ITERATIONS, 0.001)
     objp = np.zeros((nRows*nCols,3), np.float32)
     objp[:,:2] = np.mgrid[0:nCols,0:nRows].T.reshape(-1,2)
     
