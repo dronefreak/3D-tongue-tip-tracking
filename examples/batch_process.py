@@ -15,7 +15,7 @@ from pathlib import Path
 # Configuration
 INPUT_DIR = "./videos"
 OUTPUT_DIR = "./results"
-MODEL_PATH = "./shape_predictor_68_face_landmarks_finetuned.dat"
+MODEL_PATH = "./shape_predictor_68_face_landmarks_GTX.dat"
 
 # Processing options
 SKIP_FRAMES = 2  # Process every 2nd frame for faster processing
@@ -83,7 +83,8 @@ def main():
     # Check if model exists
     if not os.path.exists(MODEL_PATH):
         print(f"Error: Model file not found: {MODEL_PATH}")
-        print("Please download from: https://drive.google.com/file/d/1kEOn0SsyToOCGr45UDygxnkDo4uxlWeh/view?usp=sharing")
+        print("Download from: https://github.com/davisking/dlib-models/raw/master/shape_predictor_68_face_landmarks_GTX.dat.bz2")
+        print("Then decompress: bzip2 -d shape_predictor_68_face_landmarks_GTX.dat.bz2")
         return
 
     # Find all video files

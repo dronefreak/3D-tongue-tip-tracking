@@ -20,7 +20,7 @@ services:
     # Run with specific command
     command: >
       python facial_landmarks_video.py
-      --shape-predictor /data/models/shape_predictor_68_face_landmarks_finetuned.dat
+      --shape-predictor /data/models/shape_predictor_68_face_landmarks_GTX.dat
       --video /data/input/video.avi
       --no-display
       --export-csv /data/output/results.csv
@@ -29,6 +29,7 @@ services:
 
 # Example usage:
 # 1. Place your video in ./input/video.avi
-# 2. Place the model in ./models/shape_predictor_68_face_landmarks_finetuned.dat
+# 2. Place the model in ./models/shape_predictor_68_face_landmarks_GTX.dat
+#    Download: curl -L https://github.com/davisking/dlib-models/raw/master/shape_predictor_68_face_landmarks_GTX.dat.bz2 | bzip2 -d > ./models/shape_predictor_68_face_landmarks_GTX.dat
 # 3. Run: docker-compose up
 # 4. Results will be in ./output/

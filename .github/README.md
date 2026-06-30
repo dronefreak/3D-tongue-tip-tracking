@@ -60,7 +60,13 @@ We present a novel method for tracking the tip of tongues in 3-dimensions for me
 
 3. **Download the facial landmark model:**
 
-   Download the finetuned shape predictor model from [Google Drive](https://drive.google.com/file/d/1kEOn0SsyToOCGr45UDygxnkDo4uxlWeh/view?usp=sharing) and place it in the project directory.
+   Download the GTX shape predictor model (smaller, faster, and more accurate than the original):
+   ```bash
+   curl -L https://github.com/davisking/dlib-models/raw/master/shape_predictor_68_face_landmarks_GTX.dat.bz2 \
+     -o shape_predictor_68_face_landmarks_GTX.dat.bz2
+   bzip2 -d shape_predictor_68_face_landmarks_GTX.dat.bz2
+   ```
+   Place `shape_predictor_68_face_landmarks_GTX.dat` in the project directory.
 
 ### MATLAB Setup
 
@@ -75,7 +81,7 @@ We present a novel method for tracking the tip of tongues in 3-dimensions for me
 
 ```bash
 python facial_landmarks_video.py \
-  --shape-predictor shape_predictor_68_face_landmarks_finetuned.dat \
+  --shape-predictor shape_predictor_68_face_landmarks_GTX.dat \
   --video your_video.avi
 ```
 
@@ -83,7 +89,7 @@ python facial_landmarks_video.py \
 
 ```bash
 python facial_landmarks_video.py \
-  --shape-predictor shape_predictor_68_face_landmarks_finetuned.dat \
+  --shape-predictor shape_predictor_68_face_landmarks_GTX.dat \
   --video your_video.avi \
   --no-display \
   --skip-frames 2 \
@@ -118,7 +124,7 @@ The system uses Constrained Local Neural Fields (CLNF) to detect faces and predi
 
 **Research Reference:** [Constrained Local Neural Fields for Robust Facial Landmark Detection](https://arxiv.org/pdf/1611.08657.pdf)
 
-**Model Download:** [Finetuned Shape Predictor (68 landmarks)](https://drive.google.com/file/d/1kEOn0SsyToOCGr45UDygxnkDo4uxlWeh/view?usp=sharing)
+**Model Download:** [GTX Shape Predictor (68 landmarks)](https://github.com/davisking/dlib-models/blob/master/shape_predictor_68_face_landmarks_GTX.dat.bz2) — official dlib model, smaller and more accurate than the previous version.
 
 ### Command-Line Options
 
@@ -263,9 +269,9 @@ JSON output includes metadata:
 ### Common Issues
 
 #### "Shape predictor file not found"
-- Download the model from the [Google Drive link](https://drive.google.com/file/d/1kEOn0SsyToOCGr45UDygxnkDo4uxlWeh/view?usp=sharing)
+- Download the GTX model: `curl -L https://github.com/davisking/dlib-models/raw/master/shape_predictor_68_face_landmarks_GTX.dat.bz2 -o shape_predictor_68_face_landmarks_GTX.dat.bz2 && bzip2 -d shape_predictor_68_face_landmarks_GTX.dat.bz2`
 - Ensure the file is in the same directory as the script
-- Check the filename matches exactly: `shape_predictor_68_face_landmarks_finetuned.dat`
+- Check the filename matches exactly: `shape_predictor_68_face_landmarks_GTX.dat`
 
 #### "No mouth coordinates detected"
 - Ensure the video contains clearly visible faces

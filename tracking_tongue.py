@@ -245,6 +245,12 @@ def main() -> None:
 
     if roi:
         frame = crop_roi(frame, roi)
+        if frame.size == 0:
+            print(f"Error: ROI {roi} produces an empty frame on the first frame "
+                  f"(video is {int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))}×"
+                  f"{int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))}).")
+            cap.release()
+            sys.exit(1)
 
     prev_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -267,6 +273,13 @@ def main() -> None:
 
         if roi:
             frame = crop_roi(frame, roi)
+            if frame.size == 0:
+                # ROI is outside the video frame — skip this frame
+                frame_idx += 1
+                xs[frame_idx - 1] = tracked_pt[0]
+                ys[frame_idx - 1] = tracked_pt[1]
+                prev_gray = prev_gray   # unchanged
+                continue
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray = imsharpen(gray)
@@ -309,7 +322,11 @@ def main() -> None:
         prev_gray = gray
 
     cap.release()
-    cv2.destroyAllWindows()
+    # Some OpenCV builds (headless / no-GUI) raise on destroyAllWindows — ignore it
+    try:
+        cv2.destroyAllWindows()
+    except cv2.error:
+        pass
 
     # Trim to actual frame count
     xs = xs[:frame_idx]
