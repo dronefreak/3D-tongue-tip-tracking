@@ -50,8 +50,8 @@ import numpy as np
 # Format: (x, y, w, h) — top-left corner + size (same as OpenCV ROI convention).
 # These match the values hardcoded in tracking_tongue.m.
 PRESET_ROIS: dict[str, tuple[int, int, int, int]] = {
-    "mid":   (367, 350, 361, 365),
-    "left":  (135, 479, 367, 261),
+    "mid": (367, 350, 361, 365),
+    "left": (135, 479, 367, 261),
     "right": (595, 431, 412, 302),
 }
 
@@ -81,6 +81,7 @@ DEFAULT_FLOW_THRESHOLD: float = 6.0
 # Image helpers
 # ---------------------------------------------------------------------------
 
+
 def imsharpen(gray: np.ndarray, amount: float = 0.8, sigma: float = 2.5) -> np.ndarray:
     """
     Unsharp-mask sharpening — equivalent to MATLAB's imsharpen with default params.
@@ -98,12 +99,13 @@ def imsharpen(gray: np.ndarray, amount: float = 0.8, sigma: float = 2.5) -> np.n
 def crop_roi(frame: np.ndarray, roi: tuple[int, int, int, int]) -> np.ndarray:
     """Crop *frame* to *roi* = (x, y, w, h) — equivalent to MATLAB's imcrop."""
     x, y, w, h = roi
-    return frame[y: y + h, x: x + w]
+    return frame[y : y + h, x : x + w]
 
 
 # ---------------------------------------------------------------------------
 # KLT tracking
 # ---------------------------------------------------------------------------
+
 
 def klt_track(
     prev_gray: np.ndarray,
@@ -128,7 +130,10 @@ def klt_track(
     pts = point.reshape(1, 1, 2).astype(np.float32)
 
     new_pts, fwd_status, _ = cv2.calcOpticalFlowPyrLK(
-        prev_gray, gray, pts, None,
+        prev_gray,
+        gray,
+        pts,
+        None,
         winSize=KLT_WIN_SIZE,
         maxLevel=KLT_MAX_LEVEL,
         criteria=KLT_CRITERIA,
@@ -139,7 +144,10 @@ def klt_track(
 
     # Bidirectional check: track back and measure round-trip drift
     back_pts, bwd_status, _ = cv2.calcOpticalFlowPyrLK(
-        gray, prev_gray, new_pts, None,
+        gray,
+        prev_gray,
+        new_pts,
+        None,
         winSize=KLT_WIN_SIZE,
         maxLevel=KLT_MAX_LEVEL,
         criteria=KLT_CRITERIA,
@@ -159,43 +167,57 @@ def klt_track(
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def build_arg_parser() -> argparse.ArgumentParser:
+    """Build and return the CLI argument parser for tracking_tongue."""
     parser = argparse.ArgumentParser(
         description=(
-            "2D tongue-tip tracking via optical flow. "
-            "Python replacement for tracking_tongue.m."
+            "2D tongue-tip tracking via optical flow. Python replacement for tracking_tongue.m."
         ),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "-v", "--video", required=True,
+        "-v",
+        "--video",
+        required=True,
         help="Path to input video file (.avi, .mp4, …)",
     )
 
     roi_group = parser.add_mutually_exclusive_group()
     roi_group.add_argument(
-        "--view", choices=list(PRESET_ROIS.keys()),
+        "--view",
+        choices=list(PRESET_ROIS.keys()),
         help="Named camera view (uses preset ROI from the original study)",
     )
     roi_group.add_argument(
-        "--roi", nargs=4, type=int, metavar=("X", "Y", "W", "H"),
+        "--roi",
+        nargs=4,
+        type=int,
+        metavar=("X", "Y", "W", "H"),
         help="Custom region of interest: top-left x y, then width height",
     )
 
     parser.add_argument(
-        "--flow-threshold", type=float, default=DEFAULT_FLOW_THRESHOLD,
+        "--flow-threshold",
+        type=float,
+        default=DEFAULT_FLOW_THRESHOLD,
         help="Optical-flow magnitude threshold for tracker re-initialisation",
     )
     parser.add_argument(
-        "--no-display", action="store_true",
+        "--no-display",
+        action="store_true",
         help="Disable live preview window (faster batch processing)",
     )
     parser.add_argument(
-        "--output-csv", type=str, metavar="FILE",
+        "--output-csv",
+        type=str,
+        metavar="FILE",
         help="Save tracked coordinates to CSV (columns: frame, x, y)",
     )
     parser.add_argument(
-        "--output-json", type=str, metavar="FILE",
+        "--output-json",
+        type=str,
+        metavar="FILE",
         help="Save tracked coordinates and metadata to JSON",
     )
     return parser
@@ -205,7 +227,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
+    """Parse CLI arguments and run the 2-D tongue-tip tracking pipeline."""
     parser = build_arg_parser()
     args = parser.parse_args()
 
@@ -246,9 +270,11 @@ def main() -> None:
     if roi:
         frame = crop_roi(frame, roi)
         if frame.size == 0:
-            print(f"Error: ROI {roi} produces an empty frame on the first frame "
-                  f"(video is {int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))}×"
-                  f"{int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))}).")
+            print(
+                f"Error: ROI {roi} produces an empty frame on the first frame "
+                f"(video is {int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))}×"
+                f"{int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))})."
+            )
             cap.release()
             sys.exit(1)
 
@@ -278,7 +304,7 @@ def main() -> None:
                 frame_idx += 1
                 xs[frame_idx - 1] = tracked_pt[0]
                 ys[frame_idx - 1] = tracked_pt[1]
-                prev_gray = prev_gray   # unchanged
+                prev_gray = prev_gray  # unchanged
                 continue
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -312,8 +338,15 @@ def main() -> None:
             vis = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
             cx_i, cy_i = int(tracked_pt[0]), int(tracked_pt[1])
             cv2.circle(vis, (cx_i, cy_i), 10, (0, 0, 255), 2)
-            cv2.putText(vis, f"({cx_i},{cy_i})", (cx_i + 12, cy_i),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+            cv2.putText(
+                vis,
+                f"({cx_i},{cy_i})",
+                (cx_i + 12, cy_i),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.4,
+                (0, 255, 0),
+                1,
+            )
             cv2.imshow("Tongue Tracking – press q to stop", vis)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 print("\nUser interrupted.")
@@ -354,8 +387,7 @@ def main() -> None:
             "fps": fps,
             "flow_threshold": args.flow_threshold,
             "points": [
-                {"frame": i + 1, "x": float(xs[i]), "y": float(ys[i])}
-                for i in range(frame_idx)
+                {"frame": i + 1, "x": float(xs[i]), "y": float(ys[i])} for i in range(frame_idx)
             ],
         }
         with open(args.output_json, "w") as f:

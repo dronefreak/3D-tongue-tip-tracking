@@ -30,10 +30,10 @@ from tracking_in_3d import (
     triangulate_point_dlt,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _proj(P: np.ndarray, X: np.ndarray) -> np.ndarray:
     h = P @ np.append(X, 1.0)
@@ -44,8 +44,8 @@ def _proj(P: np.ndarray, X: np.ndarray) -> np.ndarray:
 # triangulate_point_dlt
 # ---------------------------------------------------------------------------
 
-class TestTriangulatePointDlt:
 
+class TestTriangulatePointDlt:
     def test_two_view_exact_recovery(self, three_projection_matrices, known_3d_point):
         """DLT with 2 views must recover the known point to floating-point precision."""
         P1, P2 = three_projection_matrices[:2]
@@ -84,27 +84,21 @@ class TestTriangulatePointDlt:
 # triangulate_all
 # ---------------------------------------------------------------------------
 
-class TestTriangulateAll:
 
+class TestTriangulateAll:
     def test_output_shape(self, three_projection_matrices, known_3d_point):
         n = 10
         rng = np.random.default_rng(1)
         xyz_true = known_3d_point + rng.standard_normal((n, 3)) * 5.0
 
-        pts_views = [
-            np.array([_proj(P, X) for X in xyz_true])
-            for P in three_projection_matrices
-        ]
+        pts_views = [np.array([_proj(P, X) for X in xyz_true]) for P in three_projection_matrices]
         xyz = triangulate_all(pts_views, three_projection_matrices)
         assert xyz.shape == (n, 3)
 
     def test_all_points_recovered(self, three_projection_matrices, known_3d_point):
         n = 5
         xyz_true = known_3d_point + np.arange(n).reshape(-1, 1) * np.array([1, 2, 3])
-        pts_views = [
-            np.array([_proj(P, X) for X in xyz_true])
-            for P in three_projection_matrices
-        ]
+        pts_views = [np.array([_proj(P, X) for X in xyz_true]) for P in three_projection_matrices]
         xyz = triangulate_all(pts_views, three_projection_matrices)
 
         for i in range(n):
@@ -115,8 +109,8 @@ class TestTriangulateAll:
 # _project
 # ---------------------------------------------------------------------------
 
-class TestProject:
 
+class TestProject:
     def test_known_projection(self, camera_matrix, known_3d_point):
         """Project a point at depth 1000 and check the pixel position."""
         K = camera_matrix
@@ -139,16 +133,13 @@ class TestProject:
 # _ba_residuals
 # ---------------------------------------------------------------------------
 
-class TestBaResiduals:
 
+class TestBaResiduals:
     def test_zero_residuals_on_perfect_data(self, three_projection_matrices, known_3d_point):
         """With perfect 2-D observations, residuals must be (near) zero."""
         n = 3
         xyz = known_3d_point + np.arange(n).reshape(-1, 1)
-        pts_views = [
-            np.array([_proj(P, X) for X in xyz])
-            for P in three_projection_matrices
-        ]
+        pts_views = [np.array([_proj(P, X) for X in xyz]) for P in three_projection_matrices]
         res = _ba_residuals(xyz.ravel(), pts_views, three_projection_matrices)
         assert np.abs(res).max() < 1e-6
 
@@ -156,21 +147,15 @@ class TestBaResiduals:
         """Residual length must be n_points × n_views × 2."""
         n, m = 5, len(three_projection_matrices)
         xyz = known_3d_point + np.arange(n).reshape(-1, 1)
-        pts_views = [
-            np.array([_proj(P, X) for X in xyz])
-            for P in three_projection_matrices
-        ]
+        pts_views = [np.array([_proj(P, X) for X in xyz]) for P in three_projection_matrices]
         res = _ba_residuals(xyz.ravel(), pts_views, three_projection_matrices)
         assert res.shape == (n * m * 2,)
 
     def test_nonzero_residuals_on_perturbed_points(self, three_projection_matrices, known_3d_point):
         n = 4
         xyz_true = known_3d_point + np.arange(n).reshape(-1, 1)
-        pts_views = [
-            np.array([_proj(P, X) for X in xyz_true])
-            for P in three_projection_matrices
-        ]
-        xyz_noisy = xyz_true + 10.0   # perturb 3D points
+        pts_views = [np.array([_proj(P, X) for X in xyz_true]) for P in three_projection_matrices]
+        xyz_noisy = xyz_true + 10.0  # perturb 3D points
         res = _ba_residuals(xyz_noisy.ravel(), pts_views, three_projection_matrices)
         assert np.abs(res).max() > 0.5
 
@@ -179,16 +164,13 @@ class TestBaResiduals:
 # bundle_adjust
 # ---------------------------------------------------------------------------
 
-class TestBundleAdjust:
 
+class TestBundleAdjust:
     def test_reduces_reprojection_error(self, three_projection_matrices, known_3d_point):
         n = 10
         rng = np.random.default_rng(42)
         xyz_true = known_3d_point + rng.standard_normal((n, 3)) * 5.0
-        pts_views = [
-            np.array([_proj(P, X) for X in xyz_true])
-            for P in three_projection_matrices
-        ]
+        pts_views = [np.array([_proj(P, X) for X in xyz_true]) for P in three_projection_matrices]
         xyz_noisy = xyz_true + rng.standard_normal((n, 3)) * 2.0
 
         err_before = compute_reprojection_error(xyz_noisy, pts_views, three_projection_matrices)
@@ -199,21 +181,17 @@ class TestBundleAdjust:
         n = 5
         rng = np.random.default_rng(0)
         xyz = known_3d_point + rng.standard_normal((n, 3)) * 3.0
-        pts_views = [
-            np.array([_proj(P, X) for X in xyz])
-            for P in three_projection_matrices
-        ]
+        pts_views = [np.array([_proj(P, X) for X in xyz]) for P in three_projection_matrices]
         xyz_ref, _ = bundle_adjust(xyz, pts_views, three_projection_matrices)
         assert xyz_ref.shape == (n, 3)
 
-    def test_convergence_on_perfect_initial_estimate(self, three_projection_matrices, known_3d_point):
+    def test_convergence_on_perfect_initial_estimate(
+        self, three_projection_matrices, known_3d_point
+    ):
         """Starting from perfect points, BA must give near-zero reprojection error."""
         n = 5
         xyz_true = known_3d_point + np.arange(n).reshape(-1, 1)
-        pts_views = [
-            np.array([_proj(P, X) for X in xyz_true])
-            for P in three_projection_matrices
-        ]
+        pts_views = [np.array([_proj(P, X) for X in xyz_true]) for P in three_projection_matrices]
         _, err = bundle_adjust(xyz_true.copy(), pts_views, three_projection_matrices)
         assert err < 1e-4
 
@@ -222,15 +200,12 @@ class TestBundleAdjust:
 # compute_reprojection_error
 # ---------------------------------------------------------------------------
 
-class TestComputeReprojectionError:
 
+class TestComputeReprojectionError:
     def test_zero_error_on_perfect_projection(self, three_projection_matrices, known_3d_point):
         n = 5
         xyz = known_3d_point + np.arange(n).reshape(-1, 1)
-        pts_views = [
-            np.array([_proj(P, X) for X in xyz])
-            for P in three_projection_matrices
-        ]
+        pts_views = [np.array([_proj(P, X) for X in xyz]) for P in three_projection_matrices]
         err = compute_reprojection_error(xyz, pts_views, three_projection_matrices)
         assert err == pytest.approx(0.0, abs=1e-6)
 
@@ -249,8 +224,8 @@ class TestComputeReprojectionError:
 # load_tracked_points
 # ---------------------------------------------------------------------------
 
-class TestLoadTrackedPoints:
 
+class TestLoadTrackedPoints:
     def test_round_trip(self, tmp_path):
         path = str(tmp_path / "pts.csv")
         pts_expected = np.array([[1.5, 2.7], [3.1, 4.9], [0.0, 100.0]])
@@ -288,8 +263,8 @@ class TestLoadTrackedPoints:
 # load_camera_poses
 # ---------------------------------------------------------------------------
 
-class TestLoadCameraPoses:
 
+class TestLoadCameraPoses:
     def test_loads_three_cameras(self, camera_poses_json):
         cameras = load_camera_poses(camera_poses_json)
         assert len(cameras) == 3

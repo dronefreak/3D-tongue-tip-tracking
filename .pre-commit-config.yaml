@@ -1,0 +1,38 @@
+repos:
+  # ---------------------------------------------------------------------------
+  # General file hygiene
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: check-merge-conflict
+      - id: debug-statements       # catches leftover breakpoint() / pdb calls
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  # ---------------------------------------------------------------------------
+  # Ruff — fast Python linter + formatter (replaces flake8, isort, black)
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.10
+    hooks:
+      - id: ruff                   # lint
+        args: ["--fix"]
+      - id: ruff-format            # format (like black)
+
+  # ---------------------------------------------------------------------------
+  # Commit message lint — enforce Conventional Commits style (optional,
+  # remove this block if you prefer free-form commit messages)
+  # ---------------------------------------------------------------------------
+  # - repo: https://github.com/compilerla/conventional-pre-commit
+  #   rev: v3.2.0
+  #   hooks:
+  #     - id: conventional-pre-commit
+  #       stages: [commit-msg]

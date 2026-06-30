@@ -2,76 +2,125 @@ name: CI
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: [master, main, develop]
   pull_request:
-    branches: [ master, main, develop ]
+    branches: [master, main, develop]
+
+# Cancel in-progress runs on the same branch when a new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
-    name: Test on Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: 'pip'
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake libopencv-dev
-
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-
-    - name: Lint with flake8
-      run: |
-        # Stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all errors as warnings
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-    - name: Run tests with pytest
-      run: |
-        pytest -v --tb=short
-
-    - name: Check code formatting with black
-      run: |
-        black --check *.py tests/
-
+  # ---------------------------------------------------------------------------
+  # Job 1 — Lint & format (fast, no heavy deps)
+  # ---------------------------------------------------------------------------
   lint:
-    name: Code Quality Checks
+    name: Lint & Format (ruff)
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-        cache: 'pip'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install black flake8 pylint
+      - name: Install ruff
+        run: pip install ruff
 
-    - name: Check formatting with black
-      run: black --check --diff .
+      - name: Lint with ruff
+        run: ruff check src/ tests/
 
-    - name: Lint with flake8
-      run: flake8 . --count --statistics
+      - name: Check formatting with ruff
+        run: ruff format --check src/ tests/
 
-    - name: Lint with pylint
-      run: pylint *.py --exit-zero
+  # ---------------------------------------------------------------------------
+  # Job 2 — Core tests (no dlib/imutils — fast, full Python matrix)
+  # Tests that require dlib are automatically skipped when it's not installed.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Test — Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    needs: lint
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install core dependencies (no dlib)
+        run: |
+          python -m pip install --upgrade pip
+          # Install everything except dlib and imutils (slow to compile in CI).
+          # Tests that depend on them are already marked to skip gracefully.
+          pip install \
+            "opencv-python>=4.5.0" \
+            "numpy>=1.19.0" \
+            "matplotlib>=3.3.0" \
+            "scipy>=1.5.0" \
+            "pytest>=7.0" \
+            "pytest-cov>=4.0"
+
+      - name: Run tests
+        run: |
+          pytest --tb=short \
+                 --cov=src \
+                 --cov-report=term-missing \
+                 --cov-report=xml \
+                 -q
+
+      - name: Upload coverage (Python 3.12 only)
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Job 3 — Full tests with dlib (single version, push to master/main only)
+  # Compiles dlib from source using system cmake — takes ~10 min.
+  # Cached after the first run.
+  # ---------------------------------------------------------------------------
+  test-full:
+    name: Full test suite (with dlib)
+    runs-on: ubuntu-latest
+    # Only run on pushes to master/main, not on every PR
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install system build tools for dlib
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y cmake build-essential
+
+      - name: Install all dependencies (including dlib)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run full test suite
+        run: |
+          pytest --tb=short \
+                 --cov=src \
+                 --cov-report=term-missing \
+                 -q

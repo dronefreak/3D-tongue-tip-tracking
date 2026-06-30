@@ -13,7 +13,7 @@ Covers:
 import importlib.util
 import os
 import sys
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, call, patch
 
 import cv2
 import numpy as np
@@ -23,7 +23,7 @@ import pytest
 # Import calib-camera.py via importlib (hyphen in filename prevents normal import)
 # ---------------------------------------------------------------------------
 
-_SCRIPT = os.path.join(os.path.dirname(__file__), "..", "calib-camera.py")
+_SCRIPT = os.path.join(os.path.dirname(__file__), "..", "src", "calib-camera.py")
 
 spec = importlib.util.spec_from_file_location("calib_camera", _SCRIPT)
 calib = importlib.util.module_from_spec(spec)
@@ -34,8 +34,8 @@ spec.loader.exec_module(calib)
 # initialize_arg_parser
 # ---------------------------------------------------------------------------
 
-class TestInitializeArgParser:
 
+class TestInitializeArgParser:
     def test_parses_required_positional_args(self):
         parser = calib.initialize_arg_parser()
         args = parser.parse_args(["./cam", "jpg", "8", "8", "20"])
@@ -81,12 +81,10 @@ class TestInitializeArgParser:
 # validate_inputs
 # ---------------------------------------------------------------------------
 
-class TestValidateInputs:
 
+class TestValidateInputs:
     def test_valid_inputs_pass_through(self):
-        folder, img_type, rows, cols, dim = calib.validate_inputs(
-            "./camera_01", "jpg", 8, 8, 20.0
-        )
+        folder, img_type, rows, cols, dim = calib.validate_inputs("./camera_01", "jpg", 8, 8, 20.0)
         assert folder == os.path.normpath("./camera_01")
         assert img_type == "jpg"
         assert rows == 8
@@ -131,8 +129,8 @@ class TestValidateInputs:
 # _reprojection_error
 # ---------------------------------------------------------------------------
 
-class TestReprojectionError:
 
+class TestReprojectionError:
     def _make_perfect_data(self, camera_matrix, n=5):
         """Return objpoints, imgpoints, rvecs, tvecs with zero reprojection error."""
         K = camera_matrix
@@ -152,18 +150,17 @@ class TestReprojectionError:
 
     def test_perfect_projection_gives_zero_error(self, camera_matrix):
         objpoints, imgpoints, rvecs, tvecs = self._make_perfect_data(camera_matrix)
-        err = calib._reprojection_error(objpoints, imgpoints, rvecs, tvecs,
-                                        camera_matrix, np.zeros(5))
+        err = calib._reprojection_error(
+            objpoints, imgpoints, rvecs, tvecs, camera_matrix, np.zeros(5)
+        )
         assert err == pytest.approx(0.0, abs=1e-6)
 
     def test_error_increases_with_noise(self, camera_matrix):
         objpoints, imgpoints, rvecs, tvecs = self._make_perfect_data(camera_matrix)
         # cv2.norm requires both arrays to have the same dtype (float32)
         # Use large noise (10 px) to reliably exceed the 0.5-px threshold
-        noisy = [pts + np.random.randn(*pts.shape).astype(np.float32) * 10.0
-                 for pts in imgpoints]
-        err = calib._reprojection_error(objpoints, noisy, rvecs, tvecs,
-                                        camera_matrix, np.zeros(5))
+        noisy = [pts + np.random.randn(*pts.shape).astype(np.float32) * 10.0 for pts in imgpoints]
+        err = calib._reprojection_error(objpoints, noisy, rvecs, tvecs, camera_matrix, np.zeros(5))
         assert err > 0.5
 
 
@@ -171,8 +168,8 @@ class TestReprojectionError:
 # _find_corners  (non-interactive, mocked cv2)
 # ---------------------------------------------------------------------------
 
-class TestFindCorners:
 
+class TestFindCorners:
     def _make_fake_image(self, h=480, w=640):
         return np.zeros((h, w, 3), dtype=np.uint8)
 
@@ -195,7 +192,10 @@ class TestFindCorners:
             patch("cv2.cornerSubPix", return_value=fake_corners),
         ):
             obj_pts, img_pts, img_size, _, n = calib._find_corners(
-                fake_images, 8, 6, objp,
+                fake_images,
+                8,
+                6,
+                objp,
                 (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.001),
                 interactive=False,
             )
@@ -212,7 +212,10 @@ class TestFindCorners:
 
         with patch("cv2.imread", return_value=None):
             obj_pts, img_pts, _, _, n = calib._find_corners(
-                [path], 8, 6, objp,
+                [path],
+                8,
+                6,
+                objp,
                 (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.001),
                 interactive=False,
             )
@@ -227,7 +230,10 @@ class TestFindCorners:
 
         with patch("cv2.imread") as mock_read:
             calib._find_corners(
-                [path], 8, 6, objp,
+                [path],
+                8,
+                6,
+                objp,
                 (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.001),
                 interactive=False,
             )
@@ -238,13 +244,12 @@ class TestFindCorners:
 # _save_undistorted
 # ---------------------------------------------------------------------------
 
-class TestSaveUndistorted:
 
+class TestSaveUndistorted:
     def test_does_not_crash_on_unreadable_image(self, tmp_path, camera_matrix):
         """If cv2.imread returns None, _save_undistorted must return silently."""
         with patch("cv2.imread", return_value=None):
-            calib._save_undistorted("nonexistent.jpg", camera_matrix, np.zeros(5),
-                                    str(tmp_path))
+            calib._save_undistorted("nonexistent.jpg", camera_matrix, np.zeros(5), str(tmp_path))
         # No exception — test passes
 
     def test_writes_calibresult_png(self, tmp_path, camera_matrix):
@@ -253,10 +258,8 @@ class TestSaveUndistorted:
         fake_map = np.zeros((480, 640), dtype=np.float32)
         with (
             patch("cv2.imread", return_value=fake_img),
-            patch("cv2.getOptimalNewCameraMatrix",
-                  return_value=(camera_matrix, (0, 0, 640, 480))),
-            patch("cv2.initUndistortRectifyMap",
-                  return_value=(fake_map, fake_map)),
+            patch("cv2.getOptimalNewCameraMatrix", return_value=(camera_matrix, (0, 0, 640, 480))),
+            patch("cv2.initUndistortRectifyMap", return_value=(fake_map, fake_map)),
             patch("cv2.remap", return_value=fake_img),
             patch("cv2.imwrite") as mock_write,
         ):
