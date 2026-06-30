@@ -27,13 +27,12 @@ from tracking_tongue import (
     klt_track,
 )
 
-
 # ---------------------------------------------------------------------------
 # imsharpen
 # ---------------------------------------------------------------------------
 
-class TestImsharpen:
 
+class TestImsharpen:
     def test_output_shape_matches_input(self, synthetic_gray_frame):
         out = imsharpen(synthetic_gray_frame)
         assert out.shape == synthetic_gray_frame.shape
@@ -65,8 +64,8 @@ class TestImsharpen:
 # crop_roi
 # ---------------------------------------------------------------------------
 
-class TestCropRoi:
 
+class TestCropRoi:
     def test_output_dimensions_match_roi(self, synthetic_bgr_frame):
         roi = (10, 20, 80, 60)  # x=10, y=20, w=80, h=60
         cropped = crop_roi(synthetic_bgr_frame, roi)
@@ -75,7 +74,7 @@ class TestCropRoi:
     def test_pixel_values_are_correct(self):
         """Cropped region must contain the exact pixels from the original frame."""
         frame = np.arange(200 * 200 * 3, dtype=np.uint8).reshape(200, 200, 3)
-        roi = (50, 30, 40, 20)          # x=50, y=30, w=40, h=20
+        roi = (50, 30, 40, 20)  # x=50, y=30, w=40, h=20
         cropped = crop_roi(frame, roi)
         expected = frame[30:50, 50:90]  # numpy [y:y+h, x:x+w]
         np.testing.assert_array_equal(cropped, expected)
@@ -95,8 +94,8 @@ class TestCropRoi:
 # klt_track
 # ---------------------------------------------------------------------------
 
-class TestKltTrack:
 
+class TestKltTrack:
     def test_identical_frames_track_successfully(self, synthetic_gray_frame):
         """Tracking on identical frames must succeed with negligible drift."""
         pt = np.array([100.0, 100.0], dtype=np.float32)
@@ -120,7 +119,7 @@ class TestKltTrack:
 
         # Shift by (1, 0): roll along axis=1
         curr = np.roll(prev, 1, axis=1)
-        curr[:, 0] = 0   # fill rolled-in column
+        curr[:, 0] = 0  # fill rolled-in column
 
         pt = np.array([50.0, 50.0], dtype=np.float32)
         new_pt, valid = klt_track(prev, curr, pt)
@@ -141,8 +140,8 @@ class TestKltTrack:
 # build_arg_parser
 # ---------------------------------------------------------------------------
 
-class TestBuildArgParser:
 
+class TestBuildArgParser:
     def test_video_required(self):
         parser = build_arg_parser()
         with pytest.raises(SystemExit):
@@ -200,8 +199,8 @@ class TestBuildArgParser:
 # PRESET_ROIS
 # ---------------------------------------------------------------------------
 
-class TestPresetRois:
 
+class TestPresetRois:
     def test_has_three_views(self):
         assert set(PRESET_ROIS.keys()) == {"mid", "left", "right"}
 
@@ -225,9 +224,17 @@ class TestPresetRois:
 # FARNEBACK_PARAMS
 # ---------------------------------------------------------------------------
 
-class TestFarnebackParams:
 
-    EXPECTED_KEYS = {"pyr_scale", "levels", "winsize", "iterations", "poly_n", "poly_sigma", "flags"}
+class TestFarnebackParams:
+    EXPECTED_KEYS = {
+        "pyr_scale",
+        "levels",
+        "winsize",
+        "iterations",
+        "poly_n",
+        "poly_sigma",
+        "flags",
+    }
 
     def test_has_all_required_keys(self):
         assert self.EXPECTED_KEYS.issubset(FARNEBACK_PARAMS.keys())

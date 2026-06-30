@@ -10,18 +10,16 @@ import cv2
 import numpy as np
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Camera geometry helpers
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def camera_matrix():
     """A simple pinhole camera intrinsic matrix (640×480 sensor)."""
     return np.array(
-        [[500.0,   0.0, 320.0],
-         [  0.0, 500.0, 240.0],
-         [  0.0,   0.0,   1.0]],
+        [[500.0, 0.0, 320.0], [0.0, 500.0, 240.0], [0.0, 0.0, 1.0]],
         dtype=np.float64,
     )
 
@@ -44,8 +42,8 @@ def three_projection_matrices(camera_matrix):
     R = np.eye(3, dtype=np.float64)
 
     P1 = K @ np.hstack([R, np.array([[-100.0], [0.0], [0.0]])])  # left
-    P2 = K @ np.hstack([R, np.zeros((3, 1))])                    # mid (reference)
-    P3 = K @ np.hstack([R, np.array([[100.0],  [0.0], [0.0]])])  # right
+    P2 = K @ np.hstack([R, np.zeros((3, 1))])  # mid (reference)
+    P3 = K @ np.hstack([R, np.array([[100.0], [0.0], [0.0]])])  # right
     return [P1, P2, P3]
 
 
@@ -58,6 +56,7 @@ def known_3d_point():
 # ---------------------------------------------------------------------------
 # Synthetic image / frame fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def synthetic_gray_frame():
@@ -76,6 +75,7 @@ def synthetic_bgr_frame(synthetic_gray_frame):
 # Synthetic video fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def synthetic_video_path(tmp_path):
     """
@@ -89,7 +89,7 @@ def synthetic_video_path(tmp_path):
 
     for i in range(20):
         frame = np.zeros((h, w, 3), dtype=np.uint8)
-        cx, cy = 50 + i * 3, 50 + i * 2   # moving dot
+        cx, cy = 50 + i * 3, 50 + i * 2  # moving dot
         cv2.circle(frame, (cx, cy), 8, (255, 255, 255), -1)
         writer.write(frame)
 
@@ -100,6 +100,7 @@ def synthetic_video_path(tmp_path):
 # ---------------------------------------------------------------------------
 # Camera-poses JSON fixture
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def camera_poses_json(tmp_path, camera_matrix, dist_coeffs):
@@ -114,18 +115,24 @@ def camera_poses_json(tmp_path, camera_matrix, dist_coeffs):
         "cameras": [
             {
                 "id": "left",
-                "K": K, "dist": dist,
-                "R": R_id, "t": [[-100.0], [0.0], [0.0]],
+                "K": K,
+                "dist": dist,
+                "R": R_id,
+                "t": [[-100.0], [0.0], [0.0]],
             },
             {
                 "id": "mid",
-                "K": K, "dist": dist,
-                "R": R_id, "t": [[0.0], [0.0], [0.0]],
+                "K": K,
+                "dist": dist,
+                "R": R_id,
+                "t": [[0.0], [0.0], [0.0]],
             },
             {
                 "id": "right",
-                "K": K, "dist": dist,
-                "R": R_id, "t": [[100.0], [0.0], [0.0]],
+                "K": K,
+                "dist": dist,
+                "R": R_id,
+                "t": [[100.0], [0.0], [0.0]],
             },
         ]
     }
@@ -139,9 +146,11 @@ def camera_poses_json(tmp_path, camera_matrix, dist_coeffs):
 # Tracked-points CSV fixtures
 # ---------------------------------------------------------------------------
 
+
 def _write_csv(path: str, points: np.ndarray) -> None:
     """Write (N,2) array to a CSV with header frame,x,y."""
     import csv
+
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["frame", "x", "y"])
@@ -156,10 +165,6 @@ def tracked_points_csvs(tmp_path, three_projection_matrices, known_3d_point):
     with *known_3d_point* (perfect, noise-free data).
     """
     n = 30
-    K = np.array(
-        [[500.0, 0.0, 320.0], [0.0, 500.0, 240.0], [0.0, 0.0, 1.0]],
-        dtype=np.float64,
-    )
 
     def project(P, X):
         h = P @ np.append(X, 1.0)

@@ -40,7 +40,7 @@ def process_video(video_path, output_dir):
 
     # Build command
     cmd = [
-        "python", "facial_landmarks_video.py",
+        "python", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "facial_landmarks_video.py"),
         "--shape-predictor", MODEL_PATH,
         "--video", video_path,
         "--export-csv", csv_output,

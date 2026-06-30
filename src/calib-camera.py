@@ -16,11 +16,13 @@ Example:
 """
 
 import argparse
-import numpy as np
-import cv2
 import glob
-import sys
+import json
 import os
+import sys
+
+import cv2
+import numpy as np
 
 # Number of iterations for subpixel corner refinement
 MAX_CORNER_ITERATIONS = 30
@@ -34,18 +36,22 @@ def initialize_arg_parser():
         description="Calibrate a camera using a checkerboard pattern.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("folder", type=str,
-                        help="Path to folder containing calibration images")
-    parser.add_argument("image_type", type=str,
-                        help="Image file extension (e.g. jpg, png)")
-    parser.add_argument("rows", type=int,
-                        help="Number of internal corners along the checkerboard rows")
-    parser.add_argument("cols", type=int,
-                        help="Number of internal corners along the checkerboard columns")
-    parser.add_argument("dimension", type=float,
-                        help="Physical size of each checkerboard square in mm")
+    parser.add_argument("folder", type=str, help="Path to folder containing calibration images")
+    parser.add_argument("image_type", type=str, help="Image file extension (e.g. jpg, png)")
     parser.add_argument(
-        "--stereo-folder", type=str, default=None, metavar="FOLDER",
+        "rows", type=int, help="Number of internal corners along the checkerboard rows"
+    )
+    parser.add_argument(
+        "cols", type=int, help="Number of internal corners along the checkerboard columns"
+    )
+    parser.add_argument(
+        "dimension", type=float, help="Physical size of each checkerboard square in mm"
+    )
+    parser.add_argument(
+        "--stereo-folder",
+        type=str,
+        default=None,
+        metavar="FOLDER",
         help=(
             "Path to a second camera's calibration images for stereo calibration. "
             "Image pairs are matched by filename (or sort order). "
@@ -53,7 +59,9 @@ def initialize_arg_parser():
         ),
     )
     parser.add_argument(
-        "--output-prefix", type=str, default="stereo",
+        "--output-prefix",
+        type=str,
+        default="stereo",
         help="Filename prefix for stereo output files (e.g. 'left_mid' → left_mid_R.txt …)",
     )
     return parser
@@ -78,12 +86,11 @@ def validate_inputs(folder, image_type, rows, cols, dimension):
 
     return folder, image_type, rows, cols, dimension
 
-import json
-
 
 # ---------------------------------------------------------------------------
 # Core calibration helpers
 # ---------------------------------------------------------------------------
+
 
 def _find_corners(
     images: list[str],
@@ -117,7 +124,7 @@ def _find_corners(
             continue
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        img_size = gray.shape[::-1]   # (width, height)
+        img_size = gray.shape[::-1]  # (width, height)
 
         print(f"  Processing: {fname}")
         ret, corners = cv2.findChessboardCorners(gray, (n_cols, n_rows), None)
@@ -130,7 +137,7 @@ def _find_corners(
                 cv2.imshow("Checkerboard – ESC to skip, ENTER to accept", img)
                 print("  Pattern found!  Press ENTER to accept or ESC to skip.")
                 k = cv2.waitKey(0) & 0xFF
-                if k == 27:   # ESC
+                if k == 27:  # ESC
                     print("  Skipped.")
                     img_not_good = fname
                     continue
@@ -159,7 +166,7 @@ def _save_undistorted(img_path: str, mtx: np.ndarray, dist: np.ndarray, out_fold
     mapx, mapy = cv2.initUndistortRectifyMap(mtx, dist, None, new_mtx, (w, h), 5)
     dst = cv2.remap(img, mapx, mapy, cv2.INTER_LINEAR)
     x, y, rw, rh = roi
-    dst = dst[y: y + rh, x: x + rw]
+    dst = dst[y : y + rh, x : x + rw]
     out_path = os.path.join(out_folder, "calibresult.png")
     cv2.imwrite(out_path, dst)
     print(f"  Undistorted sample: {out_path}")
@@ -185,6 +192,7 @@ def _reprojection_error(
 # Single-camera calibration
 # ---------------------------------------------------------------------------
 
+
 def calibrate_single(
     folder: str,
     image_type: str,
@@ -207,8 +215,7 @@ def calibrate_single(
 
     if len(images) < MIN_IMAGES_REQUIRED:
         raise ValueError(
-            f"Found only {len(images)} image(s) in '{folder}'; "
-            f"need at least {MIN_IMAGES_REQUIRED}."
+            f"Found only {len(images)} image(s) in '{folder}'; need at least {MIN_IMAGES_REQUIRED}."
         )
 
     print(f"Found {len(images)} image(s) in {folder}")
@@ -217,14 +224,10 @@ def calibrate_single(
     )
 
     if n_accepted < 2:
-        raise ValueError(
-            f"Only {n_accepted} pattern(s) accepted; need at least 2 for calibration."
-        )
+        raise ValueError(f"Only {n_accepted} pattern(s) accepted; need at least 2 for calibration.")
 
     print(f"\nCalibrating from {n_accepted} image(s)…")
-    _, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
-        obj_pts, img_pts, img_size, None, None
-    )
+    _, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(obj_pts, img_pts, img_size, None, None)
 
     mean_err = _reprojection_error(obj_pts, img_pts, rvecs, tvecs, mtx, dist)
     print(f"\nCamera matrix:\n{mtx}")
@@ -244,6 +247,7 @@ def calibrate_single(
 # ---------------------------------------------------------------------------
 # Stereo calibration
 # ---------------------------------------------------------------------------
+
 
 def calibrate_stereo(
     folder1: str,
@@ -325,9 +329,7 @@ def calibrate_stereo(
             print(f"  ✗ {os.path.basename(p1)} (pattern not found in both views)")
 
     if n_good < MIN_IMAGES_REQUIRED:
-        raise ValueError(
-            f"Only {n_good} valid pair(s); need at least {MIN_IMAGES_REQUIRED}."
-        )
+        raise ValueError(f"Only {n_good} valid pair(s); need at least {MIN_IMAGES_REQUIRED}.")
 
     print(f"\nCalibrating individual cameras from {n_good} pairs…")
     _, mtx1, dist1, _, _ = cv2.calibrateCamera(obj_pts_all, img_pts1_all, img_size, None, None)
@@ -335,8 +337,14 @@ def calibrate_stereo(
 
     print("Running stereo calibration (fixed intrinsics)…")
     rms, mtx1, dist1, mtx2, dist2, R, T, E, F = cv2.stereoCalibrate(
-        obj_pts_all, img_pts1_all, img_pts2_all,
-        mtx1, dist1, mtx2, dist2, img_size,
+        obj_pts_all,
+        img_pts1_all,
+        img_pts2_all,
+        mtx1,
+        dist1,
+        mtx2,
+        dist2,
+        img_size,
         flags=cv2.CALIB_FIX_INTRINSIC,
     )
     print(f"  Stereo RMS reprojection error: {rms:.4f} px")
@@ -351,17 +359,17 @@ def calibrate_stereo(
         "cameras": [
             {
                 "id": os.path.basename(folder1),
-                "K":    mtx1.tolist(),
+                "K": mtx1.tolist(),
                 "dist": dist1.ravel().tolist(),
-                "R":    np.eye(3).tolist(),
-                "t":    [[0.0], [0.0], [0.0]],
+                "R": np.eye(3).tolist(),
+                "t": [[0.0], [0.0], [0.0]],
             },
             {
                 "id": os.path.basename(folder2),
-                "K":    mtx2.tolist(),
+                "K": mtx2.tolist(),
                 "dist": dist2.ravel().tolist(),
-                "R":    R.tolist(),
-                "t":    T.tolist(),
+                "R": R.tolist(),
+                "t": T.tolist(),
             },
         ]
     }
@@ -383,7 +391,9 @@ def calibrate_stereo(
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
+    """Parse CLI arguments and run camera calibration (single or stereo)."""
     parser = initialize_arg_parser()
     args = parser.parse_args()
 
@@ -414,7 +424,13 @@ def main() -> None:
             sys.exit(1)
         try:
             calibrate_stereo(
-                folder, stereo_folder, image_type, n_rows, n_cols, objp, criteria,
+                folder,
+                stereo_folder,
+                image_type,
+                n_rows,
+                n_cols,
+                objp,
+                criteria,
                 output_prefix=args.output_prefix,
             )
         except ValueError as e:

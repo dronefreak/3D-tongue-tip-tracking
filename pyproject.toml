@@ -1,0 +1,120 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "tongue-tracking-3d"
+version = "1.1.0"
+description = "Optical Flow based Tongue Tip Tracking in 3D for medical applications"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "Saumya Saksena", email = "kumaar324@gmail.com" }]
+keywords = [
+    "tongue tracking",
+    "optical flow",
+    "3D reconstruction",
+    "medical imaging",
+    "computer vision",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "opencv-python>=4.5.0",
+    "numpy>=1.19.0",
+    "matplotlib>=3.3.0",
+    "scipy>=1.5.0",
+    "dlib>=19.21.0",
+    "imutils>=0.5.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4",
+    "pre-commit>=3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/dronefreak/3D-tongue-tip-tracking"
+"Bug Reports" = "https://github.com/dronefreak/3D-tongue-tip-tracking/issues"
+Source = "https://github.com/dronefreak/3D-tongue-tip-tracking"
+
+[project.scripts]
+tracking-tongue = "tracking_tongue:main"
+tracking-3d = "tracking_in_3d:main"
+tongue-tracking-gui = "tongue_tracking_gui:main"
+tongue-tracking-webcam = "facial_landmarks_webcam:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.py-modules]
+# Flat modules in src/ — no packages, just plain scripts
+modules = [
+    "tracking_tongue",
+    "tracking_in_3d",
+    "tongue_tracking_gui",
+    "facial_landmarks_webcam",
+    "facial_landmarks_video",
+]
+
+# ---------------------------------------------------------------------------
+# Pytest — mirrors pytest.ini (pytest.ini takes precedence while it exists;
+# pyproject.toml config is used if pytest.ini is removed in the future)
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --strict-markers --disable-warnings"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+# ---------------------------------------------------------------------------
+# Ruff — linter + formatter
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+src = ["src"]
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = [
+    "E501",   # line too long — handled by formatter
+    "UP007",  # Optional[X] vs X | None — keep compat syntax for now
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F401", "F811"]  # unused imports OK in test files
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------------------------------------------------------------------------
+# isort — import ordering (ruff handles this via "I" rules above)
+# ---------------------------------------------------------------------------
+[tool.isort]
+profile = "black"
+line_length = 100
+src_paths = ["src"]

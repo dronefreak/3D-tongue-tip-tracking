@@ -1,9 +1,10 @@
 """
 Tests for data processing and array operations
 """
-import pytest
+
 import numpy as np
-from scipy.signal import medfilt, find_peaks
+import pytest
+from scipy.signal import find_peaks, medfilt
 
 
 def test_array_preallocation():
@@ -76,7 +77,7 @@ def test_peak_detection():
     """Test peak finding in signal"""
     # Create signal with clear peaks
     x = np.linspace(0, 10, 100)
-    signal = np.sin(x) + np.sin(2*x)
+    signal = np.sin(x) + np.sin(2 * x)
 
     peaks, _ = find_peaks(signal)
 

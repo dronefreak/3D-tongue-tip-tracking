@@ -31,7 +31,7 @@ import pytest
 # We isolate only the top-level constant assignments, not the executable code.
 # ---------------------------------------------------------------------------
 
-SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "..", "facial_landmarks_video.py")
+SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "..", "src", "facial_landmarks_video.py")
 
 
 def _read_source():
@@ -43,15 +43,17 @@ def _read_source():
 # Syntax
 # ---------------------------------------------------------------------------
 
+
 def test_script_parses_without_syntax_error():
     """The entire script must be valid Python 3."""
     src = _read_source()
-    ast.parse(src)   # raises SyntaxError if broken
+    ast.parse(src)  # raises SyntaxError if broken
 
 
 # ---------------------------------------------------------------------------
 # FRAME_WIDTH constant
 # ---------------------------------------------------------------------------
+
 
 def test_frame_width_constant_is_500():
     """FRAME_WIDTH must be 500 so VideoWriter and imutils.resize stay in sync."""
@@ -85,6 +87,7 @@ def test_frame_width_used_in_video_writer():
 # ---------------------------------------------------------------------------
 # Frame-skip counter logic
 # ---------------------------------------------------------------------------
+
 
 class TestSkipFramesLogic:
     """Mirror the skip-counter logic from facial_landmarks_video.py."""
@@ -128,6 +131,7 @@ class TestSkipFramesLogic:
 # Array normalisation (zero-sum guard)
 # ---------------------------------------------------------------------------
 
+
 class TestNormalisationLogic:
     """Mirror the x-normalisation guard in facial_landmarks_video.py."""
 
@@ -156,6 +160,7 @@ class TestNormalisationLogic:
 # Preallocated-array overflow guard
 # ---------------------------------------------------------------------------
 
+
 def test_preallocation_uses_total_frames_not_frames_to_process():
     """
     Arrays must be sized by total_frames, not frames_to_process (floor division),
@@ -172,6 +177,7 @@ def test_preallocation_uses_total_frames_not_frames_to_process():
 # VideoWriter zero-width guard
 # ---------------------------------------------------------------------------
 
+
 def test_video_writer_guards_against_zero_width():
     """The orig_w > 0 guard must be present to avoid ZeroDivisionError."""
     src = _read_source()
@@ -182,12 +188,12 @@ def test_video_writer_guards_against_zero_width():
 # CSV export logic
 # ---------------------------------------------------------------------------
 
+
 class TestCsvExport:
     """Test the CSV export logic independently from the script."""
 
     @staticmethod
-    def _export_csv(path: str, frame_arr: np.ndarray,
-                    x_arr: np.ndarray, y_arr: np.ndarray) -> None:
+    def _export_csv(path: str, frame_arr: np.ndarray, x_arr: np.ndarray, y_arr: np.ndarray) -> None:
         with open(path, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["frame", "mouth_x", "mouth_y"])
@@ -196,10 +202,9 @@ class TestCsvExport:
 
     def test_csv_header(self, tmp_path):
         p = str(tmp_path / "out.csv")
-        self._export_csv(p,
-                         np.array([1, 2, 3]),
-                         np.array([10.0, 20.0, 30.0]),
-                         np.array([5.0, 15.0, 25.0]))
+        self._export_csv(
+            p, np.array([1, 2, 3]), np.array([10.0, 20.0, 30.0]), np.array([5.0, 15.0, 25.0])
+        )
         with open(p) as f:
             header = f.readline().strip()
         assert header == "frame,mouth_x,mouth_y"
@@ -207,11 +212,10 @@ class TestCsvExport:
     def test_csv_row_count(self, tmp_path):
         p = str(tmp_path / "out.csv")
         n = 7
-        self._export_csv(p, np.arange(1, n + 1),
-                         np.ones(n), np.ones(n))
+        self._export_csv(p, np.arange(1, n + 1), np.ones(n), np.ones(n))
         with open(p) as f:
             rows = list(csv.reader(f))
-        assert len(rows) == n + 1   # header + n data rows
+        assert len(rows) == n + 1  # header + n data rows
 
     def test_csv_values_round_trip(self, tmp_path):
         p = str(tmp_path / "out.csv")
@@ -232,12 +236,12 @@ class TestCsvExport:
 # JSON export logic
 # ---------------------------------------------------------------------------
 
-class TestJsonExport:
 
+class TestJsonExport:
     @staticmethod
-    def _export_json(path: str, video: str, n: int,
-                     frames: np.ndarray, xs: np.ndarray,
-                     ys: np.ndarray, skip: int) -> None:
+    def _export_json(
+        path: str, video: str, n: int, frames: np.ndarray, xs: np.ndarray, ys: np.ndarray, skip: int
+    ) -> None:
         data = {
             "video_file": video,
             "total_frames": n,
@@ -254,10 +258,15 @@ class TestJsonExport:
 
     def test_json_has_required_keys(self, tmp_path):
         p = str(tmp_path / "out.json")
-        self._export_json(p, "v.avi", 3,
-                          np.array([1, 2, 3]),
-                          np.array([1.0, 2.0, 3.0]),
-                          np.array([4.0, 5.0, 6.0]), 1)
+        self._export_json(
+            p,
+            "v.avi",
+            3,
+            np.array([1, 2, 3]),
+            np.array([1.0, 2.0, 3.0]),
+            np.array([4.0, 5.0, 6.0]),
+            1,
+        )
         with open(p) as f:
             data = json.load(f)
         for key in ("video_file", "total_frames", "detections", "coordinates"):
@@ -266,19 +275,14 @@ class TestJsonExport:
     def test_json_coordinates_length(self, tmp_path):
         p = str(tmp_path / "out.json")
         n = 5
-        self._export_json(p, "v.avi", n,
-                          np.arange(1, n + 1),
-                          np.ones(n), np.ones(n), 1)
+        self._export_json(p, "v.avi", n, np.arange(1, n + 1), np.ones(n), np.ones(n), 1)
         with open(p) as f:
             data = json.load(f)
         assert len(data["coordinates"]) == n
 
     def test_json_coordinate_entry_structure(self, tmp_path):
         p = str(tmp_path / "out.json")
-        self._export_json(p, "v.avi", 1,
-                          np.array([42]),
-                          np.array([7.5]),
-                          np.array([8.5]), 1)
+        self._export_json(p, "v.avi", 1, np.array([42]), np.array([7.5]), np.array([8.5]), 1)
         with open(p) as f:
             data = json.load(f)
         entry = data["coordinates"][0]
@@ -291,6 +295,7 @@ class TestJsonExport:
 # CLI --help (proves argparse is intact, no SyntaxError at load time)
 # ---------------------------------------------------------------------------
 
+
 def test_help_flag_exits_zero():
     """
     Running the script with --help must exit 0.
@@ -299,6 +304,7 @@ def test_help_flag_exits_zero():
     Skipped when optional dependencies (dlib, imutils) are not installed.
     """
     import importlib
+
     if importlib.util.find_spec("imutils") is None or importlib.util.find_spec("dlib") is None:
         pytest.skip("imutils/dlib not installed in this environment")
 
@@ -307,7 +313,5 @@ def test_help_flag_exits_zero():
         capture_output=True,
         text=True,
     )
-    assert result.returncode == 0, (
-        f"--help exited {result.returncode}\n{result.stderr}"
-    )
+    assert result.returncode == 0, f"--help exited {result.returncode}\n{result.stderr}"
     assert "--shape-predictor" in result.stdout

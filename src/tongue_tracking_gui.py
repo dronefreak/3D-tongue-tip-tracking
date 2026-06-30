@@ -9,17 +9,20 @@ This provides a user-friendly interface for:
 - Viewing results
 """
 
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext
-import threading
-import subprocess
 import os
+import subprocess
 import sys
+import threading
+import tkinter as tk
 from pathlib import Path
+from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 
 class TongueTrackingGUI:
+    """Tkinter GUI wrapper for 2-D facial-landmark tracking and 3-D reconstruction."""
+
     def __init__(self, root):
+        """Initialise the GUI, bind widgets, and render the first tab."""
         self.root = root
         self.root.title("3D Tongue Tip Tracking")
         self.root.geometry("800x600")
@@ -41,7 +44,7 @@ class TongueTrackingGUI:
         """Setup the user interface"""
         # Create notebook for tabs
         notebook = ttk.Notebook(self.root)
-        notebook.pack(fill='both', expand=True, padx=10, pady=10)
+        notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Tab 1: Video Processing
         video_frame = ttk.Frame(notebook)
@@ -64,71 +67,57 @@ class TongueTrackingGUI:
         self.setup_about_tab(about_frame)
 
         # Status bar
-        self.status_bar = ttk.Label(
-            self.root, text="Ready", relief=tk.SUNKEN, anchor=tk.W
-        )
+        self.status_bar = ttk.Label(self.root, text="Ready", relief=tk.SUNKEN, anchor=tk.W)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def setup_video_tab(self, parent):
         """Setup video processing tab"""
         # Model file selection
         model_frame = ttk.LabelFrame(parent, text="Model File", padding=10)
-        model_frame.pack(fill='x', padx=10, pady=5)
+        model_frame.pack(fill="x", padx=10, pady=5)
 
-        ttk.Entry(model_frame, textvariable=self.model_path, width=60).pack(
-            side=tk.LEFT, padx=5
-        )
-        ttk.Button(
-            model_frame, text="Browse...", command=self.browse_model
-        ).pack(side=tk.LEFT)
+        ttk.Entry(model_frame, textvariable=self.model_path, width=60).pack(side=tk.LEFT, padx=5)
+        ttk.Button(model_frame, text="Browse...", command=self.browse_model).pack(side=tk.LEFT)
 
         # Video file selection
         video_frame = ttk.LabelFrame(parent, text="Input Video", padding=10)
-        video_frame.pack(fill='x', padx=10, pady=5)
+        video_frame.pack(fill="x", padx=10, pady=5)
 
-        ttk.Entry(video_frame, textvariable=self.video_path, width=60).pack(
-            side=tk.LEFT, padx=5
-        )
-        ttk.Button(
-            video_frame, text="Browse...", command=self.browse_video
-        ).pack(side=tk.LEFT)
+        ttk.Entry(video_frame, textvariable=self.video_path, width=60).pack(side=tk.LEFT, padx=5)
+        ttk.Button(video_frame, text="Browse...", command=self.browse_video).pack(side=tk.LEFT)
 
         # Output directory
         output_frame = ttk.LabelFrame(parent, text="Output Directory", padding=10)
-        output_frame.pack(fill='x', padx=10, pady=5)
+        output_frame.pack(fill="x", padx=10, pady=5)
 
-        ttk.Entry(output_frame, textvariable=self.output_dir, width=60).pack(
-            side=tk.LEFT, padx=5
-        )
-        ttk.Button(
-            output_frame, text="Browse...", command=self.browse_output
-        ).pack(side=tk.LEFT)
+        ttk.Entry(output_frame, textvariable=self.output_dir, width=60).pack(side=tk.LEFT, padx=5)
+        ttk.Button(output_frame, text="Browse...", command=self.browse_output).pack(side=tk.LEFT)
 
         # Processing options
         options_frame = ttk.LabelFrame(parent, text="Processing Options", padding=10)
-        options_frame.pack(fill='x', padx=10, pady=5)
+        options_frame.pack(fill="x", padx=10, pady=5)
 
         ttk.Label(options_frame, text="Skip Frames:").grid(
             row=0, column=0, sticky=tk.W, padx=5, pady=2
         )
-        ttk.Spinbox(
-            options_frame, from_=1, to=10, textvariable=self.skip_frames, width=10
-        ).grid(row=0, column=1, sticky=tk.W, padx=5, pady=2)
+        ttk.Spinbox(options_frame, from_=1, to=10, textvariable=self.skip_frames, width=10).grid(
+            row=0, column=1, sticky=tk.W, padx=5, pady=2
+        )
         ttk.Label(options_frame, text="(1 = process all frames)").grid(
             row=0, column=2, sticky=tk.W, padx=5, pady=2
         )
 
-        ttk.Checkbutton(
-            options_frame, text="No Display (faster)", variable=self.no_display
-        ).grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=5, pady=2)
+        ttk.Checkbutton(options_frame, text="No Display (faster)", variable=self.no_display).grid(
+            row=1, column=0, columnspan=2, sticky=tk.W, padx=5, pady=2
+        )
 
-        ttk.Checkbutton(
-            options_frame, text="Export CSV", variable=self.export_csv
-        ).grid(row=2, column=0, sticky=tk.W, padx=5, pady=2)
+        ttk.Checkbutton(options_frame, text="Export CSV", variable=self.export_csv).grid(
+            row=2, column=0, sticky=tk.W, padx=5, pady=2
+        )
 
-        ttk.Checkbutton(
-            options_frame, text="Export JSON", variable=self.export_json
-        ).grid(row=2, column=1, sticky=tk.W, padx=5, pady=2)
+        ttk.Checkbutton(options_frame, text="Export JSON", variable=self.export_json).grid(
+            row=2, column=1, sticky=tk.W, padx=5, pady=2
+        )
 
         ttk.Checkbutton(
             options_frame, text="Export Annotated Video", variable=self.export_video
@@ -136,44 +125,35 @@ class TongueTrackingGUI:
 
         # Process button
         ttk.Button(
-            parent,
-            text="Start Processing",
-            command=self.process_video,
-            style='Accent.TButton'
+            parent, text="Start Processing", command=self.process_video, style="Accent.TButton"
         ).pack(pady=20)
 
         # Output log
         log_frame = ttk.LabelFrame(parent, text="Output Log", padding=10)
-        log_frame.pack(fill='both', expand=True, padx=10, pady=5)
+        log_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        self.video_log = scrolledtext.ScrolledText(
-            log_frame, height=10, state='disabled'
-        )
-        self.video_log.pack(fill='both', expand=True)
+        self.video_log = scrolledtext.ScrolledText(log_frame, height=10, state="disabled")
+        self.video_log.pack(fill="both", expand=True)
 
     def setup_webcam_tab(self, parent):
         """Setup webcam tab"""
         # Model file
         model_frame = ttk.LabelFrame(parent, text="Model File", padding=10)
-        model_frame.pack(fill='x', padx=10, pady=5)
+        model_frame.pack(fill="x", padx=10, pady=5)
 
-        ttk.Entry(model_frame, textvariable=self.model_path, width=60).pack(
-            side=tk.LEFT, padx=5
-        )
-        ttk.Button(
-            model_frame, text="Browse...", command=self.browse_model
-        ).pack(side=tk.LEFT)
+        ttk.Entry(model_frame, textvariable=self.model_path, width=60).pack(side=tk.LEFT, padx=5)
+        ttk.Button(model_frame, text="Browse...", command=self.browse_model).pack(side=tk.LEFT)
 
         # Camera settings
         camera_frame = ttk.LabelFrame(parent, text="Camera Settings", padding=10)
-        camera_frame.pack(fill='x', padx=10, pady=5)
+        camera_frame.pack(fill="x", padx=10, pady=5)
 
         ttk.Label(camera_frame, text="Camera Index:").grid(
             row=0, column=0, sticky=tk.W, padx=5, pady=2
         )
-        ttk.Spinbox(
-            camera_frame, from_=0, to=5, textvariable=self.camera_index, width=10
-        ).grid(row=0, column=1, sticky=tk.W, padx=5, pady=2)
+        ttk.Spinbox(camera_frame, from_=0, to=5, textvariable=self.camera_index, width=10).grid(
+            row=0, column=1, sticky=tk.W, padx=5, pady=2
+        )
         ttk.Label(camera_frame, text="(0 = default camera)").grid(
             row=0, column=2, sticky=tk.W, padx=5, pady=2
         )
@@ -194,18 +174,13 @@ class TongueTrackingGUI:
         """
 
         info_frame = ttk.LabelFrame(parent, text="Instructions", padding=10)
-        info_frame.pack(fill='both', expand=True, padx=10, pady=5)
+        info_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        ttk.Label(info_frame, text=instructions, justify=tk.LEFT).pack(
-            anchor=tk.W, padx=5, pady=5
-        )
+        ttk.Label(info_frame, text=instructions, justify=tk.LEFT).pack(anchor=tk.W, padx=5, pady=5)
 
         # Start button
         ttk.Button(
-            parent,
-            text="Start Webcam Tracking",
-            command=self.start_webcam,
-            style='Accent.TButton'
+            parent, text="Start Webcam Tracking", command=self.start_webcam, style="Accent.TButton"
         ).pack(pady=20)
 
     def setup_settings_tab(self, parent):
@@ -230,9 +205,7 @@ class TongueTrackingGUI:
         Then decompress with: bzip2 -d shape_predictor_68_face_landmarks_GTX.dat.bz2
         """
 
-        ttk.Label(parent, text=settings_text, justify=tk.LEFT).pack(
-            anchor=tk.NW, padx=20, pady=20
-        )
+        ttk.Label(parent, text=settings_text, justify=tk.LEFT).pack(anchor=tk.NW, padx=20, pady=20)
 
     def setup_about_tab(self, parent):
         """Setup about tab"""
@@ -259,15 +232,13 @@ class TongueTrackingGUI:
         License: MIT
         """
 
-        ttk.Label(parent, text=about_text, justify=tk.LEFT).pack(
-            anchor=tk.NW, padx=20, pady=20
-        )
+        ttk.Label(parent, text=about_text, justify=tk.LEFT).pack(anchor=tk.NW, padx=20, pady=20)
 
     def browse_model(self):
         """Browse for model file"""
         filename = filedialog.askopenfilename(
             title="Select Shape Predictor Model",
-            filetypes=[("DAT files", "*.dat"), ("All files", "*.*")]
+            filetypes=[("DAT files", "*.dat"), ("All files", "*.*")],
         )
         if filename:
             self.model_path.set(filename)
@@ -276,10 +247,7 @@ class TongueTrackingGUI:
         """Browse for video file"""
         filename = filedialog.askopenfilename(
             title="Select Video File",
-            filetypes=[
-                ("Video files", "*.avi *.mp4 *.mov *.mkv"),
-                ("All files", "*.*")
-            ]
+            filetypes=[("Video files", "*.avi *.mp4 *.mov *.mkv"), ("All files", "*.*")],
         )
         if filename:
             self.video_path.set(filename)
@@ -292,10 +260,10 @@ class TongueTrackingGUI:
 
     def log_message(self, message, log_widget):
         """Add message to log widget"""
-        log_widget.configure(state='normal')
-        log_widget.insert(tk.END, message + '\n')
+        log_widget.configure(state="normal")
+        log_widget.insert(tk.END, message + "\n")
         log_widget.see(tk.END)
-        log_widget.configure(state='disabled')
+        log_widget.configure(state="disabled")
 
     def process_video(self):
         """Process video file"""
@@ -321,11 +289,16 @@ class TongueTrackingGUI:
 
         # Build command
         video_name = Path(self.video_path.get()).stem
+        _here = os.path.dirname(os.path.abspath(__file__))
         cmd = [
-            sys.executable, "facial_landmarks_video.py",
-            "--shape-predictor", self.model_path.get(),
-            "--video", self.video_path.get(),
-            "--skip-frames", str(self.skip_frames.get())
+            sys.executable,
+            os.path.join(_here, "facial_landmarks_video.py"),
+            "--shape-predictor",
+            self.model_path.get(),
+            "--video",
+            self.video_path.get(),
+            "--skip-frames",
+            str(self.skip_frames.get()),
         ]
 
         if self.no_display.get():
@@ -340,20 +313,16 @@ class TongueTrackingGUI:
             cmd.extend(["--export-json", json_path])
 
         if self.export_video.get():
-            video_path = os.path.join(
-                self.output_dir.get(), f"{video_name}_annotated.avi"
-            )
+            video_path = os.path.join(self.output_dir.get(), f"{video_name}_annotated.avi")
             cmd.extend(["--output-video", video_path])
 
         # Run in thread
         self.status_bar.config(text="Processing...")
-        self.video_log.configure(state='normal')
-        self.video_log.delete('1.0', tk.END)
-        self.video_log.configure(state='disabled')
+        self.video_log.configure(state="normal")
+        self.video_log.delete("1.0", tk.END)
+        self.video_log.configure(state="disabled")
 
-        thread = threading.Thread(
-            target=self.run_command, args=(cmd, self.video_log)
-        )
+        thread = threading.Thread(target=self.run_command, args=(cmd, self.video_log))
         thread.daemon = True
         thread.start()
 
@@ -369,10 +338,14 @@ class TongueTrackingGUI:
             return
 
         # Build command
+        _here = os.path.dirname(os.path.abspath(__file__))
         cmd = [
-            sys.executable, "facial_landmarks_webcam.py",
-            "--shape-predictor", self.model_path.get(),
-            "--camera", str(self.camera_index.get())
+            sys.executable,
+            os.path.join(_here, "facial_landmarks_webcam.py"),
+            "--shape-predictor",
+            self.model_path.get(),
+            "--camera",
+            str(self.camera_index.get()),
         ]
 
         self.status_bar.config(text="Webcam running...")
@@ -384,7 +357,10 @@ class TongueTrackingGUI:
         try:
             subprocess.run(cmd)
         except Exception as e:
-            self.root.after(0, lambda: messagebox.showerror("Error", f"Failed to start webcam: {e}"))
+            err_msg = str(e)
+            self.root.after(
+                0, lambda: messagebox.showerror("Error", f"Failed to start webcam: {err_msg}")
+            )
         finally:
             self.root.after(0, lambda: self.status_bar.config(text="Ready"))
 
@@ -392,37 +368,38 @@ class TongueTrackingGUI:
         """Run command and capture output"""
         try:
             process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
             )
 
             for line in process.stdout:
-                self.root.after(0, lambda l=line: self.log_message(l.strip(), log_widget))
+                self.root.after(0, lambda line=line: self.log_message(line.strip(), log_widget))
 
             process.wait()
 
             if process.returncode == 0:
                 self.root.after(0, lambda: self.status_bar.config(text="Processing complete!"))
-                self.root.after(0, lambda: messagebox.showinfo(
-                    "Success", "Processing completed successfully!"
-                ))
+                self.root.after(
+                    0, lambda: messagebox.showinfo("Success", "Processing completed successfully!")
+                )
             else:
                 self.root.after(0, lambda: self.status_bar.config(text="Processing failed"))
-                self.root.after(0, lambda: messagebox.showerror(
-                    "Error", "Processing failed. Check the log for details."
-                ))
+                self.root.after(
+                    0,
+                    lambda: messagebox.showerror(
+                        "Error", "Processing failed. Check the log for details."
+                    ),
+                )
 
         except Exception as e:
+            err_msg = str(e)
             self.root.after(0, lambda: self.status_bar.config(text="Error"))
-            self.root.after(0, lambda: messagebox.showerror("Error", str(e)))
+            self.root.after(0, lambda: messagebox.showerror("Error", err_msg))
 
 
 def main():
+    """Launch the Tkinter GUI for 3D tongue-tip tracking."""
     root = tk.Tk()
-    app = TongueTrackingGUI(root)
+    app = TongueTrackingGUI(root)  # noqa: F841 — reference kept alive by mainloop
     root.mainloop()
 
 

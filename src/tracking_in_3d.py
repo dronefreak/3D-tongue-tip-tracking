@@ -56,15 +56,15 @@ import json
 import os
 import sys
 
-import numpy as np
-from scipy.optimize import least_squares
-
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.optimize import least_squares
 
 # ---------------------------------------------------------------------------
 # Camera utilities
 # ---------------------------------------------------------------------------
+
 
 def load_camera_poses(json_path: str) -> list[dict]:
     """
@@ -110,6 +110,7 @@ def load_tracked_points(csv_path: str) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # Triangulation (DLT — equivalent to MATLAB triangulateMultiview)
 # ---------------------------------------------------------------------------
+
 
 def triangulate_point_dlt(
     pts_2d: list[tuple[float, float]],
@@ -171,6 +172,7 @@ def triangulate_all(
 # Bundle adjustment (scipy — equivalent to MATLAB bundleAdjustment)
 # ---------------------------------------------------------------------------
 
+
 def _project(P: np.ndarray, X: np.ndarray) -> np.ndarray:
     """Project 3-D point X with (3,4) projection matrix P → (2,) image point."""
     h = P @ np.append(X, 1.0)
@@ -227,7 +229,7 @@ def bundle_adjust(
         args=(pts_views, proj_mats),
         method="trf",
         loss="huber",
-        f_scale=1.0,        # Huber threshold in pixels
+        f_scale=1.0,  # Huber threshold in pixels
         max_nfev=500,
         verbose=0,
     )
@@ -244,6 +246,7 @@ def bundle_adjust(
 # ---------------------------------------------------------------------------
 # Reprojection error (without BA — for diagnostics)
 # ---------------------------------------------------------------------------
+
 
 def compute_reprojection_error(
     xyz: np.ndarray,
@@ -262,6 +265,7 @@ def compute_reprojection_error(
 # ---------------------------------------------------------------------------
 # Visualisation (replaces MATLAB pcshow / plotCamera)
 # ---------------------------------------------------------------------------
+
 
 def visualise_3d(
     xyz: np.ndarray,
@@ -295,13 +299,13 @@ def visualise_3d(
             # Centre in world coords = -R^T · t
             centre = (-cam["R"].T @ cam["t"]).ravel()
             ax.scatter(*centre, s=150, marker="^", color="red", zorder=5)
-            ax.text(centre[0], centre[1], centre[2], f'  {cam["id"]}', fontsize=9)
+            ax.text(centre[0], centre[1], centre[2], f"  {cam['id']}", fontsize=9)
 
     ax.set_xlabel("X (mm)")
     ax.set_ylabel("Y (mm)")
     ax.set_zlabel("Z (mm)")
     ax.set_title(title)
-    ax.invert_yaxis()   # match MATLAB 'VerticalAxisDir', 'down'
+    ax.invert_yaxis()  # match MATLAB 'VerticalAxisDir', 'down'
 
     # Colour bar for frame index
     sm = plt.cm.ScalarMappable(cmap="viridis", norm=plt.Normalize(vmin=1, vmax=n))
@@ -324,7 +328,9 @@ def visualise_3d(
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def build_arg_parser() -> argparse.ArgumentParser:
+    """Build and return the CLI argument parser for tracking_in_3d."""
     parser = argparse.ArgumentParser(
         description=(
             "3D tongue-tip reconstruction from multi-view tracked points. "
@@ -333,26 +339,44 @@ def build_arg_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "--cameras", required=True, metavar="camera_poses.json",
+        "--cameras",
+        required=True,
+        metavar="camera_poses.json",
         help=(
             "JSON file with camera intrinsics and extrinsics for all views "
             "(produced by: python calib-camera.py ... --stereo-folder ...)"
         ),
     )
-    parser.add_argument("--left-csv",  required=True, metavar="FILE",
-                        help="CSV of tracked 2-D points from the left-view camera")
-    parser.add_argument("--mid-csv",   required=True, metavar="FILE",
-                        help="CSV of tracked 2-D points from the mid-view camera")
-    parser.add_argument("--right-csv", required=True, metavar="FILE",
-                        help="CSV of tracked 2-D points from the right-view camera")
-    parser.add_argument("--no-ba", action="store_true",
-                        help="Skip bundle adjustment (faster, less accurate)")
-    parser.add_argument("--output-csv", metavar="FILE",
-                        help="Save 3-D coordinates to CSV (columns: frame, x, y, z)")
-    parser.add_argument("--save-plot", metavar="FILE",
-                        help="Save 3-D scatter plot to an image file (PNG/PDF/…)")
-    parser.add_argument("--no-display", action="store_true",
-                        help="Do not open an interactive plot window")
+    parser.add_argument(
+        "--left-csv",
+        required=True,
+        metavar="FILE",
+        help="CSV of tracked 2-D points from the left-view camera",
+    )
+    parser.add_argument(
+        "--mid-csv",
+        required=True,
+        metavar="FILE",
+        help="CSV of tracked 2-D points from the mid-view camera",
+    )
+    parser.add_argument(
+        "--right-csv",
+        required=True,
+        metavar="FILE",
+        help="CSV of tracked 2-D points from the right-view camera",
+    )
+    parser.add_argument(
+        "--no-ba", action="store_true", help="Skip bundle adjustment (faster, less accurate)"
+    )
+    parser.add_argument(
+        "--output-csv", metavar="FILE", help="Save 3-D coordinates to CSV (columns: frame, x, y, z)"
+    )
+    parser.add_argument(
+        "--save-plot", metavar="FILE", help="Save 3-D scatter plot to an image file (PNG/PDF/…)"
+    )
+    parser.add_argument(
+        "--no-display", action="store_true", help="Do not open an interactive plot window"
+    )
     return parser
 
 
@@ -360,15 +384,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
+    """Parse CLI arguments and run the 3-D reconstruction pipeline."""
     parser = build_arg_parser()
     args = parser.parse_args()
 
     # --- Validate inputs --------------------------------------------------
     for path, label in [
-        (args.cameras,   "camera-poses JSON"),
-        (args.left_csv,  "left CSV"),
-        (args.mid_csv,   "mid CSV"),
+        (args.cameras, "camera-poses JSON"),
+        (args.left_csv, "left CSV"),
+        (args.mid_csv, "mid CSV"),
         (args.right_csv, "right CSV"),
     ]:
         if not os.path.exists(path):
@@ -384,12 +410,12 @@ def main() -> None:
 
     # Expect cameras ordered as left, mid, right (or use first three)
     proj_mats = [cam["P"] for cam in cameras[:3]]
-    cam_ids   = [cam["id"] for cam in cameras[:3]]
+    cam_ids = [cam["id"] for cam in cameras[:3]]
     print(f"  Camera order: {cam_ids}")
 
     print("Loading tracked 2-D points…")
-    pts_left  = load_tracked_points(args.left_csv)
-    pts_mid   = load_tracked_points(args.mid_csv)
+    pts_left = load_tracked_points(args.left_csv)
+    pts_mid = load_tracked_points(args.mid_csv)
     pts_right = load_tracked_points(args.right_csv)
 
     n_pts = len(pts_mid)
@@ -431,9 +457,7 @@ def main() -> None:
             writer = csv.writer(f)
             writer.writerow(["frame", "x_mm", "y_mm", "z_mm"])
             for i, (x, y, z) in enumerate(xyz):
-                writer.writerow([i + 1, round(float(x), 4),
-                                          round(float(y), 4),
-                                          round(float(z), 4)])
+                writer.writerow([i + 1, round(float(x), 4), round(float(y), 4), round(float(z), 4)])
         print(f"Saved CSV   : {args.output_csv}")
 
     # --- Visualise --------------------------------------------------------
