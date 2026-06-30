@@ -213,7 +213,7 @@ class TongueTrackingGUI:
         settings_text = """
         Default Settings:
 
-        • Model Path: Select the shape_predictor_68_face_landmarks_finetuned.dat file
+        • Model Path: Select the shape_predictor_68_face_landmarks_GTX.dat file
         • Skip Frames: 1 (process all), increase for faster processing
         • No Display: Enable for headless/batch processing
         • Export Options: Choose CSV, JSON, or annotated video output
@@ -225,8 +225,9 @@ class TongueTrackingGUI:
         • Process shorter segments for testing
 
         Model Download:
-        Download the facial landmark model from:
-        https://drive.google.com/file/d/1kEOn0SsyToOCGr45UDygxnkDo4uxlWeh/view
+        Download the GTX facial landmark model (smaller, faster, more accurate):
+        https://github.com/davisking/dlib-models/raw/master/shape_predictor_68_face_landmarks_GTX.dat.bz2
+        Then decompress with: bzip2 -d shape_predictor_68_face_landmarks_GTX.dat.bz2
         """
 
         ttk.Label(parent, text=settings_text, justify=tk.LEFT).pack(

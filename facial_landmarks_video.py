@@ -1,5 +1,5 @@
 # USAGE
-# python facial_landmarks_video.py --shape-predictor shape_predictor_68_face_landmarks_finetuned.dat --video input_video.avi
+# python facial_landmarks_video.py --shape-predictor shape_predictor_68_face_landmarks_GTX.dat --video input_video.avi
 # For faster batch processing: add --no-display
 # To skip frames: add --skip-frames N (e.g., --skip-frames 2 processes every other frame)
 # To export data: add --export-csv output.csv or --export-json output.json
